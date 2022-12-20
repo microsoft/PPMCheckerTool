@@ -4,7 +4,7 @@ Copyright (c) 2022 Microsoft Corporation
 
 Module Name:
 
-    EmptyExample.cs
+    PPMCheckerTool.cs
 
 Abstract:
 

@@ -8,16 +8,16 @@
 		<Platforms>AnyCPU;x64</Platforms>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-		<OutputPath>..\bin\Release\EmptyExample\</OutputPath>
+		<OutputPath>..\bin\Release\PPMCheckerTool\</OutputPath>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-		<OutputPath>..\bin\Release\EmptyExample\</OutputPath>
+		<OutputPath>..\bin\Release\PPMCheckerTool\</OutputPath>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-		<OutputPath>..\bin\Debug\EmptyExample\</OutputPath>
+		<OutputPath>..\bin\Debug\PPMCheckerTool\</OutputPath>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-		<OutputPath>..\bin\Debug\EmptyExample\</OutputPath>
+		<OutputPath>..\bin\Debug\PPMCheckerTool\</OutputPath>
 	</PropertyGroup>
 	<PropertyGroup>
 		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
