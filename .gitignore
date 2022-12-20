@@ -8,3 +8,5 @@ obj/
 *.nuget.targets
 
 launchSettings.json
+
+*.pubxml*
