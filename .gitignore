@@ -1,0 +1,10 @@
+.vs/
+bin/
+obj/
+
+*.csproj.user
+
+*.nuget.props
+*.nuget.targets
+
+launchSettings.json
