@@ -544,42 +544,26 @@ namespace PPMCheckerTool
 
                     // Multimedia logic still need to work on
 
-                    //if (qosValues.ElementAt(index).Key == QOS_LEVEL.Multimedia) //Multimedia should be higher than high QoS
-                    //{
-                    //    if (qosValues.ElementAt(index).Value.Item1 < HighQoSLevel.Value.Item1)
-                    //    {
-                    //        flags.QoSPolicyAC.Add(qosValues.ElementAt(index).Key.ToString(), 1);
-                    //        results.Add(String.Format("EPP: AC MultimediaQos is lower than HighQos. AC = {0} | DC = {1}", qosValues.ElementAt(index).Value.Item1, HighQoSLevel.Value.Item1));
-                    //    }
-                    //    if (qosValues.ElementAt(index).Value.Item2 < HighQoSLevel.Value.Item2)
-                    //    {
-                    //        flags.QoSPolicyDC.Add(qosValues.ElementAt(index).Key.ToString(), 1);
-                    //        results.Add(String.Format("EPP: DC MultimediaQos is lower than HighQos. AC = {0} | DC = {2}", qosValues.ElementAt(index).Value.Item2, HighQoSLevel.Value.Item2));
-                    //    }
-                    //}
-                    //else
-                    //{
-                        for (int revIndex = index - 1; revIndex >= 0; revIndex--)
+                    for (int revIndex = index - 1; revIndex >= 0; revIndex--)
+                    {
+                        if (qosValues.ElementAt(index).Value.Item1 < qosValues.ElementAt(revIndex).Value.Item1)
                         {
-                            if (qosValues.ElementAt(index).Value.Item1 < qosValues.ElementAt(revIndex).Value.Item1)
-                            {
-                                foundIssue = true;
-                                flags.QoSPolicyAC.Add((qosValues.ElementAt(index).Key).ToString(), 1);
-                                results.Add(String.Format("EPP: AC {0}Qos is lower than {1}Qos. {0} = {2} | {1} = {3}", qosValues.ElementAt(index).Key.ToString(), qosValues.ElementAt(revIndex).Key.ToString(), qosValues.ElementAt(index).Value.Item1, qosValues.ElementAt(revIndex).Value.Item1));
-                            }
-                            if (qosValues.ElementAt(index).Value.Item2 < qosValues.ElementAt(revIndex).Value.Item2)
-                            {
-                                foundIssue = true;
-                                flags.QoSPolicyDC.Add((qosValues.ElementAt(index).Key).ToString(), 1);
-                                results.Add(String.Format("EPP: DC {0}Qos is lower than {1}Qos. {0} = {2} | {1} = {3}", qosValues.ElementAt(index).Key.ToString(), qosValues.ElementAt(revIndex).Key.ToString(), qosValues.ElementAt(index).Value.Item2, qosValues.ElementAt(revIndex).Value.Item2));
-                            }
-                            if (foundIssue)
-                            {
-                                foundIssue = false;
-                                break;
-                            }
+                            foundIssue = true;
+                            flags.QoSPolicyAC.Add((qosValues.ElementAt(index).Key).ToString(), 1);
+                            results.Add(String.Format("EPP: AC {0}Qos is lower than {1}Qos. {0} = {2} | {1} = {3}", qosValues.ElementAt(index).Key.ToString(), qosValues.ElementAt(revIndex).Key.ToString(), qosValues.ElementAt(index).Value.Item1, qosValues.ElementAt(revIndex).Value.Item1));
                         }
-                    //}
+                        if (qosValues.ElementAt(index).Value.Item2 < qosValues.ElementAt(revIndex).Value.Item2)
+                        {
+                            foundIssue = true;
+                            flags.QoSPolicyDC.Add((qosValues.ElementAt(index).Key).ToString(), 1);
+                            results.Add(String.Format("EPP: DC {0}Qos is lower than {1}Qos. {0} = {2} | {1} = {3}", qosValues.ElementAt(index).Key.ToString(), qosValues.ElementAt(revIndex).Key.ToString(), qosValues.ElementAt(index).Value.Item2, qosValues.ElementAt(revIndex).Value.Item2));
+                        }
+                        if (foundIssue)
+                        {
+                            foundIssue = false;
+                            break;
+                        }
+                    }
                 }
             }
         }
