@@ -225,7 +225,7 @@ namespace PPMCheckerTool
                 }
                 else if (t.Type == typeof(IGenericEvent))
                 {
-
+                    //Comment
                 }
             }
             while (timelineEnumerator.MoveNext(stopTime));
