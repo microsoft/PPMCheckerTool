@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net461</TargetFramework>
+		<TargetFramework>net4.8</TargetFramework>
 		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
 		<DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
 		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
