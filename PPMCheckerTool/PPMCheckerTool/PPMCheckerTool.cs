@@ -18,6 +18,7 @@ Author:
 
     Mark Bellon (mabellon) 1-Nov-2017
     Sidharth Venkatesh (sivenkatesh) 19-Dec-2022
+    Zied Ben Hamouda (zbenhamouda) 19-Dec-2022
 
 --*/
 using System;
@@ -40,37 +41,44 @@ namespace PPMCheckerTool
     {
         private const String GUIDFriendlyNameFile = "GuidToFriendlyName.csv";
         public const String NoOverlay = "No Overlay";
-        public static Guid DefaultProfile = Guid.Parse("00000000-0000-0000-0000-000000000000");
-        public const String DefaultProfileGuidString = "Profile_Default";
 
-        // Kernel Processor Power - QosClassPolicyRundown
-        public class QosClassPolicyRundown
+        // PPM settings GUIDs
+        public static Guid GuidEPP = new Guid("36687f9e-e3a5-4dbf-b1dc-15eb381c6863");
+        public static Guid GuidFrequencyCap = new Guid("75b0ae3f-bce0-45a7-8c89-c9611c25e100");
+        public static Guid GuidSchedulingPolicy = new Guid("93b8b6dc-0698-4d1c-9ee4-0644e900c85d");
+        public static Guid GuidShortSchedulingPolicy = new Guid("bae08b81-2d5e-4688-ad6a-13243356654b");
+        public static Guid GuidCPMinCores = new Guid("0cc5b647-c1df-4637-891a-dec35c318583");
+        public static Guid GuidCPMaxCores = new Guid("ea062031-0e34-4ff1-9b6d-eb1059334028");
+
+        // Power profiles GUIDs
+        public static Guid GuidDefault = new Guid("00000000-0000-0000-0000-000000000000");
+        public static Guid GuidLowQoS = new Guid("c04a802d-2205-4910-ae98-3b51e3bb72f2");
+        public static Guid GuidEcoQoS = new Guid("336c7511-f109-4172-bb3a-3ea51f815ada");
+        public static Guid GuidUtilityQoS = new Guid("33cc3a0d-45ee-43ca-86c4-695bfc9a313b");
+        public static Guid GuidConstrained = new Guid("ee1e4f72-e368-46b1-b3c6-5048b11c2dbd");
+        public static Guid GuidStandby = new Guid("8bc6262c-c026-411d-ae3b-7e2f70811a13");
+
+        // GUIDs of all the settings to validate
+        static public List<Guid> GuidPPMSettings = new List<Guid>
         {
-            public UInt16 MaxPolicyPresent;
-            public UInt16 MaxEquivalentFrequencyPercent;
-            public UInt16 MinPolicyPresent;
-            public UInt32 AutonomousActivityWindow;
-            public byte EnergyPerfPreference;
-            public bool ProvideGuidance;
-            public bool AllowThrottling;
-            public byte PerfBoostMode;
-            public byte LatencyHintPerf;
-            public bool TrackDesiredCrossClass;
+            GuidEPP,                    
+            GuidFrequencyCap,           
+            GuidSchedulingPolicy,       
+            GuidShortSchedulingPolicy, 
+            GuidCPMinCores,       
+            GuidCPMaxCores
+        };
 
-            public QosClassPolicyRundown(IReadOnlyList<IGenericEventField> structure)
-            {
-                MaxPolicyPresent = structure[0].AsUInt16;
-                MaxEquivalentFrequencyPercent = structure[1].AsUInt16;
-                MinPolicyPresent = structure[2].AsUInt16;
-                AutonomousActivityWindow = structure[3].AsUInt32;
-                EnergyPerfPreference = structure[4].AsByte;
-                ProvideGuidance = structure[5].AsBoolean;
-                AllowThrottling = structure[6].AsBoolean;
-                PerfBoostMode = structure[7].AsByte;
-                LatencyHintPerf = structure[8].AsByte;
-                TrackDesiredCrossClass = structure[9].AsBoolean;
-            }
-        }
+        // GUIDs of all the profiles to validate
+        static public List<Guid> GuidPPMProfiles = new List<Guid>
+        {
+            GuidDefault,
+            GuidLowQoS,
+            GuidEcoQoS,
+            GuidUtilityQoS,
+            GuidConstrained,
+            GuidStandby
+        };
 
         // Class to flag objective errors in Qos
         public class ProcessoPolicyValidationFlags
@@ -103,14 +111,6 @@ namespace PPMCheckerTool
             public string? altitudeAC;
         }
 
-        // Core states
-        public class CoreState
-        {
-            public UInt32 nominalCpuFrequencyMHz;
-            public UInt32 maxCpuFrequencyMHz;
-            public uint coreType; // 1 is big cores, 0 is little cores
-        }
-
         [Flags]
         public enum PPM_PERF_QOS_DISABLE_REASON
         {
@@ -136,54 +136,6 @@ namespace PPMCheckerTool
             Multimedia = 5,
             enum_Max = Multimedia
         }
-
-        // Altitude enum to find out which party was responsible in changing the preset values
-        public enum POWER_SETTING_ALTITUDE
-        {
-            NONE = -1,
-            GROUP_POLICY = 0,
-            USER = 1,
-            RUNTIME_OVERRIDE = 2,
-            PROVISIONING = 3,
-            OEM_CUSTOMIZATION = 4,
-            INTERNAL_OVERRIDE = 5,
-            OS_DEFAULT = 6
-        }
-
-        // Running type for MultiCoreHeteroSetRundown
-        public enum RunningType
-        {
-            Short = 0,
-            Long = 1,
-            Max = 2
-        }
-
-        // Hetero Cpu policy for MultiCoreHeteroSetRundown
-        public enum HeteroCpuPolicy
-        {
-            All = 0,
-            Large = 1,
-            LargeOrIdle = 2,
-            Small = 3,
-            SmallOrIdle = 4,
-            Dynamic = 5,
-            BiasedSmall = 6,
-            BiasedLarge = 7,
-            Default = 8,
-            Max = 9,
-        }
-
-        // Ppm Hetero System
-        public enum PPM_HETERO_SYSTEM
-        {
-            PpmHeteroSystemNone = 0,
-            PpmHeteroSystemSimulated = 1,
-            PpmHeteroSystemEfficiencyClass = 2,
-            PpmHeteroSystemFavoredCore = 3,
-            PpmHeteroSystemVirtual = 4,
-            PpmHeteroSystemHgs = 5,
-            PpmHeteroSystemMaximum = 6
-        };
 
         // Legacy to FriendlyNames for Qos levels
         static public Dictionary<string, string> QoSLevelNames = new Dictionary<string, string>
@@ -236,6 +188,7 @@ namespace PPMCheckerTool
                     return -1;
                 }
 
+                // Process the input ETL trace
                 AnalyzeTrace(inputFile, outputFile, start, stop, noHeader);
 
             }
@@ -252,7 +205,6 @@ namespace PPMCheckerTool
             return 0;
         }
 
-
         /// <summary>
         /// Cracks the trace, loads the required datasources, validates the necessary data is present for analysis, constructs 
         /// enumerator of events to process, analyzes relevent time spans and outputs results to csv file.
@@ -264,16 +216,12 @@ namespace PPMCheckerTool
         /// <param name="noHeader"></param>
         static void AnalyzeTrace(string tracePath, string outputPath, Timestamp startTime, Timestamp stopTime, bool noHeader)
         {
-
-
-
             using (ITraceProcessor trace = TraceProcessor.Create(tracePath, true, true))
             {
                 // Enable DataSources
                 IPendingResult<ISystemMetadata> systemMetadata = trace.Enable(TraceDataSource.SystemMetadata);
                 IPendingResult<IGenericEventDataSource> genericEventDataSource = trace.Enable(TraceDataSource.GenericEvents);
                 
-
                 // Process Data Sources
                 trace.Process();
 
@@ -294,7 +242,6 @@ namespace PPMCheckerTool
                 Guid RundownEffectiveOverlayPowerScheme = Guid.Empty;
                 String RundownPowerSchemeString = String.Empty;
                 String RundownEffectiveOverlayPowerSchemeString = String.Empty;
-                bool? RundownPowerSource = null;
 
                 string QoSLevelName = "";
                 // Extract System Metadata, or other static rundown information that may be worth logging
@@ -315,26 +262,16 @@ namespace PPMCheckerTool
                 results.Add("ProcessorModel: " + processorModel);
                 results.Add("Num Cores: " + numCores);
 
-                // Initialize cores
-                CoreState[] cores = new CoreState[numCores];
-                for (uint i = 0; i < numCores; i++)
-                {
-                    cores[i] = new CoreState();
-                    //cores[i].coreType = (uint)systemMetadata.Result.Processors[(int)i].EfficiencyClass ; // Find out what type of core it is - Big or Little
-                }
-
                 // Validation flags
                 ProcessoPolicyValidationFlags flags = new ProcessoPolicyValidationFlags();
                 SortedList<QOS_LEVEL, Tuple<uint?, uint?>> qosValues = new SortedList<QOS_LEVEL, Tuple<uint?, uint?>>();
 
-                // Each ProfileId + PowerSetting GUID maps to a pair of settings for AC/DC respectively
+                // Maps PPM Setting --> Profile --> (AC value , DC value)
                 Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>> powSettings = new Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>>();
                 Dictionary<uint, Tuple<string, string, Guid>> profileNames = new Dictionary<uint, Tuple<string, string, Guid>>();
 
                 // Local CSV generated by dumping powercfg caches a mapping of GUID to nice friendly setting name
                 Dictionary<Guid, string> GuidToFriendlyName = new Dictionary<Guid, string>();
-
-
 
                 try
                 {
@@ -432,23 +369,9 @@ namespace PPMCheckerTool
                                 powSettings[guidString].Add(profileID, new Tuple<uint?, uint?>(AC, DC));
                             }
                         }
-
-                        // Get Nominal Frequency of one of the big cores
-                        if (genericEvent.TaskName.Equals("Summary2"))
-                        {
-                            UInt16 processorNumber = genericEvent.Fields[1].AsByte;
-                            UInt32 freq = genericEvent.Fields[4].AsUInt32;
-                            cores[processorNumber].nominalCpuFrequencyMHz = genericEvent.Fields[4].AsUInt32;
-                            cores[processorNumber].maxCpuFrequencyMHz = (uint)(genericEvent.Fields[5].AsUInt32 * cores[processorNumber].nominalCpuFrequencyMHz / 100);
-                        }
                     }
                     else if (genericEvent.ProviderId.Equals(GUIDS.Microsoft_Windows_UserModePowerService))
                     {
-                        if (genericEvent.TaskName.Equals("RundownPowerSource"))
-                        {
-                            RundownPowerSource = genericEvent.Fields[0].AsBoolean;
-                        }
-
                         // PowerScheme - Should mostly always be Balanced
                         if (genericEvent.TaskName.Equals("RundownPowerScheme"))
                         {
@@ -472,13 +395,90 @@ namespace PPMCheckerTool
                     }
                 }
 
-                //Add umpo results
-                results.Add("Rundown Power Source: " + (RundownPowerSource == true ? "AC" : "DC"));
+                //Add  results
                 results.Add("Rundown Power Scheme: " + RundownPowerSchemeString);
                 results.Add("Rundown Effective Power Overlay: " + RundownEffectiveOverlayPowerSchemeString);
-                validateQoSOrder(profileNames, flags, powSettings, qosValues, results);
+
+                // Validate that they key PPM settings are checked in
+                CheckPPMSettings(powSettings, profileNames, GuidToFriendlyName, results);
+
+                // Validate QoS Order 
+                ValidateQoSOrder(profileNames, flags, powSettings, qosValues, results);
 
                 WriteOutput(results, outputPath, true); // Always No header for now
+            }
+        }
+
+        /// <summary>
+        /// This method validates that all the "key" PPM settings for Power and Perf are present across all the profiles 
+        /// 
+        /// </summary>
+        public static void CheckPPMSettings(Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>> powSettings,
+            Dictionary<uint, Tuple<string, string, Guid>> profileNames,
+            Dictionary<Guid, string> GuidToFriendlyName,
+            List<string> results)
+        {
+            // List of waivers ( we can accept in some cases when a specific PPM setting is not used for a specific profile)
+            // Each element in the waiver list is a pair PPMSetting-Profile
+            List<Tuple<Guid, Guid>> waivers = new List<Tuple<Guid, Guid>>();
+            waivers.Add(new Tuple<Guid, Guid>(GuidCPMinCores, GuidLowQoS));
+            waivers.Add(new Tuple<Guid, Guid>(GuidCPMinCores, GuidEcoQoS));
+            waivers.Add(new Tuple<Guid, Guid>(GuidCPMinCores, GuidUtilityQoS));
+            waivers.Add(new Tuple<Guid, Guid>(GuidCPMaxCores, GuidLowQoS));
+            waivers.Add(new Tuple<Guid, Guid>(GuidCPMaxCores, GuidEcoQoS));
+            waivers.Add(new Tuple<Guid, Guid>(GuidCPMaxCores, GuidUtilityQoS));
+
+            // Iterate across all the PPM settings 
+            foreach (Guid settingGuid in GuidPPMSettings)
+            {
+                string settingName;
+                GuidToFriendlyName.TryGetValue(settingGuid, out settingName);
+
+                if (!powSettings.ContainsKey(settingGuid))
+                {
+                    results.Add(String.Format("Setting: {0} was not used for any of the profiles", settingName));
+                    continue;
+                }
+
+                // Iterate across all the profiles
+                foreach (Guid profileGuid in GuidPPMProfiles)
+                {
+                    string profileName;
+                    GuidToFriendlyName.TryGetValue(profileGuid, out profileName);
+
+                    // Check if there is a waiver for this case
+                    Tuple<Guid, Guid> pairSettingProfile = new Tuple<Guid, Guid>(settingGuid, profileGuid);
+                    if (waivers.Contains(pairSettingProfile))
+                    {
+                        continue;
+                    }
+
+                    // Check if this profile is supported
+                    var profile_id = profileNames.FirstOrDefault(x => x.Value.Item3 == profileGuid).Key;
+                    if (profile_id == null)
+                    {
+                        results.Add(String.Format("Profile {0} not supported", profileName));
+                        continue;
+                    }
+
+                    // Check if this profile is configured
+                    if (!powSettings[settingGuid].ContainsKey(profile_id))
+                    {
+                        results.Add(String.Format("Setting {0} not configured for profile {1}", settingName, profileNames[profile_id].Item1));
+                        continue;
+                    }
+
+                    // Check AC mode is configured 
+                    if (powSettings[settingGuid][profile_id].Item1 == null)
+                    {
+                        results.Add(String.Format("Setting {0} not configured for profile {1} in AC mode", settingName, profileNames[profile_id].Item1));
+                    }
+                    // Check DC mode is configured
+                    if (powSettings[settingGuid][profile_id].Item2 == null)
+                    {
+                        results.Add(String.Format("Setting {0} not configured for profile {1} in DC mode", settingName, profileNames[profile_id].Item1));
+                    }
+                }
             }
         }
 
@@ -487,7 +487,7 @@ namespace PPMCheckerTool
         /// QoS Level orders High (0) > Medium (9) > Low (10) > Utility (6) > Eco (5) (Multimedia (2), Deadline (12))
         ///
         /// </summary>
-        public static void validateQoSOrder(Dictionary<uint, Tuple<string, string, Guid>> profileNames, ProcessoPolicyValidationFlags flags, Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>> powSettings, SortedList<QOS_LEVEL, Tuple<uint?, uint?>> qosValues, List<string> results)
+        public static void ValidateQoSOrder(Dictionary<uint, Tuple<string, string, Guid>> profileNames, ProcessoPolicyValidationFlags flags, Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>> powSettings, SortedList<QOS_LEVEL, Tuple<uint?, uint?>> qosValues, List<string> results)
         {
             Guid perfEppGuid = new Guid("36687f9e-e3a5-4dbf-b1dc-15eb381c6863");
             Dictionary<uint, Tuple<uint?, uint?>> energyPerfPreference;
