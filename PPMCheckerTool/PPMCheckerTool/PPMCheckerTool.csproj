@@ -35,12 +35,14 @@
 		<PackageReference Include="Microsoft.Windows.Performance.AddIn.UTC" Version="10.0.18829" />
 		<PackageReference Include="Microsoft.Windows.Performance.Core.x64" Version="10.0.18829" />
 		<PackageReference Include="Microsoft.Windows.Performance.Data" Version="0.22.0" />
+		<PackageReference Include="System.Xml.XmlDocument" Version="4.3.0" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\Common\Common.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<EmbeddedResource Include="GuidToFriendlyName.csv" />
+		<EmbeddedResource Include="PPMSettingRules.xml" />
 	</ItemGroup>
 	<ItemGroup>
 		<Reference Include="System.Core" />
