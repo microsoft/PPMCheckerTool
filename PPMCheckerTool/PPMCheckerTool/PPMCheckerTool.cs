@@ -18,6 +18,7 @@ Author:
 
     Mark Bellon (mabellon) 1-Nov-2017
     Sidharth Venkatesh (sivenkatesh) 19-Dec-2022
+    Zied Ben Hamouda (zbenhamouda) 19-Dec-2022
 
 --*/
 using System;
@@ -33,66 +34,66 @@ using Microsoft.Windows.EventTracing.Cpu;
 using Microsoft.Windows.EventTracing.Symbols;
 using Common;
 using System.Reflection;
+using System.Collections;
+using System.Collections.Specialized;
+using System.Linq.Expressions;
+using System.Xml;
+using System.CodeDom;
 
 namespace PPMCheckerTool
 {
     class PPMCheckerTool : BaseAnalyzer
     {
         private const String GUIDFriendlyNameFile = "GuidToFriendlyName.csv";
+        private const String PPMSettingRulesXMLFile = "PPMSettingRules.xml";
         public const String NoOverlay = "No Overlay";
-        public static Guid DefaultProfile = Guid.Parse("00000000-0000-0000-0000-000000000000");
-        public const String DefaultProfileGuidString = "Profile_Default";
 
-        // Kernel Processor Power - QosClassPolicyRundown
-        public class QosClassPolicyRundown
+        // PPM settings GUIDs
+        public static Guid GuidEPP = new Guid("36687f9e-e3a5-4dbf-b1dc-15eb381c6863");
+        public static Guid GuidFrequencyCap = new Guid("75b0ae3f-bce0-45a7-8c89-c9611c25e100");
+        public static Guid GuidSchedulingPolicy = new Guid("93b8b6dc-0698-4d1c-9ee4-0644e900c85d");
+        public static Guid GuidShortSchedulingPolicy = new Guid("bae08b81-2d5e-4688-ad6a-13243356654b");
+        public static Guid GuidCPMinCores = new Guid("0cc5b647-c1df-4637-891a-dec35c318583");
+        public static Guid GuidCPMaxCores = new Guid("ea062031-0e34-4ff1-9b6d-eb1059334028");
+
+        // Power profiles GUIDs
+        public static Guid GuidDefault = new Guid("00000000-0000-0000-0000-000000000000");
+        public static Guid GuidSustainedPerf = new Guid("0aabb002-a307-447e-9b81-1d819df6c6d0");
+        public static Guid GuidMultimediaQos = new Guid("0c3d5326-944b-4aab-8ad8-fe422a0e50e0");
+        public static Guid GuidLowLatency = new Guid("0da965dc-8fcf-4c0b-8efe-8dd5e7bc959a");
+        public static Guid GuidScreenOff = new Guid("2e92e666-c3f6-42c3-89bd-94d40fabcde5");
+        public static Guid GuidLowQoS = new Guid("c04a802d-2205-4910-ae98-3b51e3bb72f2");
+        public static Guid GuidEcoQoS = new Guid("336c7511-f109-4172-bb3a-3ea51f815ada");
+        public static Guid GuidUtilityQoS = new Guid("33cc3a0d-45ee-43ca-86c4-695bfc9a313b");
+        public static Guid GuidConstrained = new Guid("ee1e4f72-e368-46b1-b3c6-5048b11c2dbd");
+        public static Guid GuidStandby = new Guid("8bc6262c-c026-411d-ae3b-7e2f70811a13");
+        public static Guid GuidLowPower = new Guid("4569e601-272e-4869-bcab-1c6c03d7966f");
+        public static Guid GuidEntryLevelPerf = new Guid("a4a61b5f-f42c-4d23-b3ab-5c27df9f0f18");
+        public static Guid GuidGameMode = new Guid("d4140c81-ebba-4e60-8561-6918290359cd");
+
+        // Profile hierarchy table
+        // The profiles are ordered by inheritance E.g., LowQoS inherits from MedQoS ==> MedQoS order is lower than LowQoS order 
+        // Each element is a pair (profile GUID, parent profile GUID)
+        static public OrderedDictionary OrderedProfileHierarchy = new OrderedDictionary()
         {
-            public UInt16 MaxPolicyPresent;
-            public UInt16 MaxEquivalentFrequencyPercent;
-            public UInt16 MinPolicyPresent;
-            public UInt32 AutonomousActivityWindow;
-            public byte EnergyPerfPreference;
-            public bool ProvideGuidance;
-            public bool AllowThrottling;
-            public byte PerfBoostMode;
-            public byte LatencyHintPerf;
-            public bool TrackDesiredCrossClass;
+            { GuidDefault, GuidDefault },
+            { GuidEntryLevelPerf,  GuidDefault },
+            { GuidLowQoS,  GuidEntryLevelPerf },
+            { GuidUtilityQoS,  GuidLowQoS },
+            { GuidEcoQoS,  GuidUtilityQoS },
+            { GuidMultimediaQos,  GuidDefault },
+            { GuidSustainedPerf,  GuidDefault },
+            { GuidScreenOff,  GuidDefault },
+            { GuidConstrained,  GuidDefault },
+            { GuidStandby,  GuidDefault },
+            { GuidLowPower,  GuidDefault },
+            { GuidGameMode,  GuidDefault },
+        };
 
-            public QosClassPolicyRundown(IReadOnlyList<IGenericEventField> structure)
-            {
-                MaxPolicyPresent = structure[0].AsUInt16;
-                MaxEquivalentFrequencyPercent = structure[1].AsUInt16;
-                MinPolicyPresent = structure[2].AsUInt16;
-                AutonomousActivityWindow = structure[3].AsUInt32;
-                EnergyPerfPreference = structure[4].AsByte;
-                ProvideGuidance = structure[5].AsBoolean;
-                AllowThrottling = structure[6].AsBoolean;
-                PerfBoostMode = structure[7].AsByte;
-                LatencyHintPerf = structure[8].AsByte;
-                TrackDesiredCrossClass = structure[9].AsBoolean;
-            }
-        }
-
-        // Class to flag objective errors in Qos
-        public class ProcessoPolicyValidationFlags
-        {
-            public Dictionary<string, int> FreqPolicyAC;
-            public Dictionary<string, int> FreqPolicyDC;
-
-            public Dictionary<string, int> QoSPolicyAC;
-            public Dictionary<string, int> QoSPolicyDC;
-
-            public Dictionary<string, int> EPPAcDc;
-
-            public ProcessoPolicyValidationFlags()
-            {
-                FreqPolicyAC = new Dictionary<string, int>();
-                FreqPolicyDC = new Dictionary<string, int>();
-
-                QoSPolicyAC = new Dictionary<string, int>();
-                QoSPolicyDC = new Dictionary<string, int>();
-                EPPAcDc = new Dictionary<string, int>();
-            }
-        }
+        // Validation rules 
+        // Maps ProfileGuid --> (SettingGuid, AC MinValue, AC MaxValue, DC MinValue, DC MaxValue)
+        static public Dictionary <Guid, List<Tuple <Guid, uint? , uint?, uint?, uint? >>> ValidationRules 
+            = new Dictionary<Guid, List<Tuple<Guid, uint?, uint?, uint?, uint? >>>();
 
         // Class for settings values
         public class SettingValues
@@ -102,88 +103,6 @@ namespace PPMCheckerTool
             public string? altitudeDC;
             public string? altitudeAC;
         }
-
-        // Core states
-        public class CoreState
-        {
-            public UInt32 nominalCpuFrequencyMHz;
-            public UInt32 maxCpuFrequencyMHz;
-            public uint coreType; // 1 is big cores, 0 is little cores
-        }
-
-        [Flags]
-        public enum PPM_PERF_QOS_DISABLE_REASON
-        {
-            None = 0,
-            PpmPerfQosDisableInternal = 1,              // Legacy                   The NtPowerInformation API to explicitly disable BAM-PPM
-            PpmPerfQosDisableNoProfile = 2,             // No Povisioning package   None of the policy settings relevant to BAM-PPM have been configured (provisioning package missing).
-            PpmPerfQosDisableNoPolicy = 4,              // On AC                    None of the policy settings relevant to BAM-PPM have been configured (on AC).
-            PpmPerfQosDisableInsufficientPolicy = 8,    // Slider @ MaxPerf         There are BAM-PPM setting configured, but they aren’t any more restrictive than normal settings 
-            PpmPerfQosDisableMaxOverride = 16,          // Boot Perf Boost          A component has requested the system run all-out (this happens for a short period of time after boot, sleep/hibernate, or CS exit)
-            PpmPerfQosDisableLowLatency = 32,           // Low Latency
-            PpmPerfQosDisableSmtScheduler = 64,         // The heterogeneous scheduler is disabled for some reason (usually due to No Profile or No Hardware Support)
-            PpmPerfQosDisableNoHardwareSupport = 128,   // The platform’s perf state implementation isn’t compatible with BAM-PPM
-            //PpmPerfQosDisableMax,
-        };
-
-        public enum QOS_LEVEL
-        {
-            High = 0,
-            Medium = 1,
-            Low = 2,
-            Utility = 3,
-            Eco = 4,
-            Multimedia = 5,
-            enum_Max = Multimedia
-        }
-
-        // Altitude enum to find out which party was responsible in changing the preset values
-        public enum POWER_SETTING_ALTITUDE
-        {
-            NONE = -1,
-            GROUP_POLICY = 0,
-            USER = 1,
-            RUNTIME_OVERRIDE = 2,
-            PROVISIONING = 3,
-            OEM_CUSTOMIZATION = 4,
-            INTERNAL_OVERRIDE = 5,
-            OS_DEFAULT = 6
-        }
-
-        // Running type for MultiCoreHeteroSetRundown
-        public enum RunningType
-        {
-            Short = 0,
-            Long = 1,
-            Max = 2
-        }
-
-        // Hetero Cpu policy for MultiCoreHeteroSetRundown
-        public enum HeteroCpuPolicy
-        {
-            All = 0,
-            Large = 1,
-            LargeOrIdle = 2,
-            Small = 3,
-            SmallOrIdle = 4,
-            Dynamic = 5,
-            BiasedSmall = 6,
-            BiasedLarge = 7,
-            Default = 8,
-            Max = 9,
-        }
-
-        // Ppm Hetero System
-        public enum PPM_HETERO_SYSTEM
-        {
-            PpmHeteroSystemNone = 0,
-            PpmHeteroSystemSimulated = 1,
-            PpmHeteroSystemEfficiencyClass = 2,
-            PpmHeteroSystemFavoredCore = 3,
-            PpmHeteroSystemVirtual = 4,
-            PpmHeteroSystemHgs = 5,
-            PpmHeteroSystemMaximum = 6
-        };
 
         // Legacy to FriendlyNames for Qos levels
         static public Dictionary<string, string> QoSLevelNames = new Dictionary<string, string>
@@ -236,6 +155,7 @@ namespace PPMCheckerTool
                     return -1;
                 }
 
+                // Process the input ETL trace
                 AnalyzeTrace(inputFile, outputFile, start, stop, noHeader);
 
             }
@@ -252,7 +172,6 @@ namespace PPMCheckerTool
             return 0;
         }
 
-
         /// <summary>
         /// Cracks the trace, loads the required datasources, validates the necessary data is present for analysis, constructs 
         /// enumerator of events to process, analyzes relevent time spans and outputs results to csv file.
@@ -264,16 +183,12 @@ namespace PPMCheckerTool
         /// <param name="noHeader"></param>
         static void AnalyzeTrace(string tracePath, string outputPath, Timestamp startTime, Timestamp stopTime, bool noHeader)
         {
-
-
-
             using (ITraceProcessor trace = TraceProcessor.Create(tracePath, true, true))
             {
                 // Enable DataSources
                 IPendingResult<ISystemMetadata> systemMetadata = trace.Enable(TraceDataSource.SystemMetadata);
                 IPendingResult<IGenericEventDataSource> genericEventDataSource = trace.Enable(TraceDataSource.GenericEvents);
                 
-
                 // Process Data Sources
                 trace.Process();
 
@@ -294,7 +209,6 @@ namespace PPMCheckerTool
                 Guid RundownEffectiveOverlayPowerScheme = Guid.Empty;
                 String RundownPowerSchemeString = String.Empty;
                 String RundownEffectiveOverlayPowerSchemeString = String.Empty;
-                bool? RundownPowerSource = null;
 
                 string QoSLevelName = "";
                 // Extract System Metadata, or other static rundown information that may be worth logging
@@ -315,26 +229,14 @@ namespace PPMCheckerTool
                 results.Add("ProcessorModel: " + processorModel);
                 results.Add("Num Cores: " + numCores);
 
-                // Initialize cores
-                CoreState[] cores = new CoreState[numCores];
-                for (uint i = 0; i < numCores; i++)
-                {
-                    cores[i] = new CoreState();
-                    //cores[i].coreType = (uint)systemMetadata.Result.Processors[(int)i].EfficiencyClass ; // Find out what type of core it is - Big or Little
-                }
-
-                // Validation flags
-                ProcessoPolicyValidationFlags flags = new ProcessoPolicyValidationFlags();
-                SortedList<QOS_LEVEL, Tuple<uint?, uint?>> qosValues = new SortedList<QOS_LEVEL, Tuple<uint?, uint?>>();
-
-                // Each ProfileId + PowerSetting GUID maps to a pair of settings for AC/DC respectively
+                // Maps PPM Setting --> Profile --> (AC value , DC value)
                 Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>> powSettings = new Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>>();
+
+                // Maps ProfileID --> (Name , Name, Guid)
                 Dictionary<uint, Tuple<string, string, Guid>> profileNames = new Dictionary<uint, Tuple<string, string, Guid>>();
 
                 // Local CSV generated by dumping powercfg caches a mapping of GUID to nice friendly setting name
                 Dictionary<Guid, string> GuidToFriendlyName = new Dictionary<Guid, string>();
-
-
 
                 try
                 {
@@ -432,23 +334,9 @@ namespace PPMCheckerTool
                                 powSettings[guidString].Add(profileID, new Tuple<uint?, uint?>(AC, DC));
                             }
                         }
-
-                        // Get Nominal Frequency of one of the big cores
-                        if (genericEvent.TaskName.Equals("Summary2"))
-                        {
-                            UInt16 processorNumber = genericEvent.Fields[1].AsByte;
-                            UInt32 freq = genericEvent.Fields[4].AsUInt32;
-                            cores[processorNumber].nominalCpuFrequencyMHz = genericEvent.Fields[4].AsUInt32;
-                            cores[processorNumber].maxCpuFrequencyMHz = (uint)(genericEvent.Fields[5].AsUInt32 * cores[processorNumber].nominalCpuFrequencyMHz / 100);
-                        }
                     }
                     else if (genericEvent.ProviderId.Equals(GUIDS.Microsoft_Windows_UserModePowerService))
                     {
-                        if (genericEvent.TaskName.Equals("RundownPowerSource"))
-                        {
-                            RundownPowerSource = genericEvent.Fields[0].AsBoolean;
-                        }
-
                         // PowerScheme - Should mostly always be Balanced
                         if (genericEvent.TaskName.Equals("RundownPowerScheme"))
                         {
@@ -472,97 +360,414 @@ namespace PPMCheckerTool
                     }
                 }
 
-                //Add umpo results
-                results.Add("Rundown Power Source: " + (RundownPowerSource == true ? "AC" : "DC"));
+                //Add  results
                 results.Add("Rundown Power Scheme: " + RundownPowerSchemeString);
                 results.Add("Rundown Effective Power Overlay: " + RundownEffectiveOverlayPowerSchemeString);
-                validateQoSOrder(profileNames, flags, powSettings, qosValues, results);
+
+                // Read the validation rules
+                ReadValidationRules();
+
+                // Validate PPM settings
+                ValidatePPMSettings(powSettings, profileNames, GuidToFriendlyName, results);
 
                 WriteOutput(results, outputPath, true); // Always No header for now
             }
         }
 
         /// <summary>
-        /// This method validates that each QoS level values are higher or equal to the level bellow
-        /// QoS Level orders High (0) > Medium (9) > Low (10) > Utility (6) > Eco (5) (Multimedia (2), Deadline (12))
-        ///
+        /// This method reads the validation rules  
+        /// The validation rules are set in an XML file
+        /// 
         /// </summary>
-        public static void validateQoSOrder(Dictionary<uint, Tuple<string, string, Guid>> profileNames, ProcessoPolicyValidationFlags flags, Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>> powSettings, SortedList<QOS_LEVEL, Tuple<uint?, uint?>> qosValues, List<string> results)
+        public static void ReadValidationRules()
         {
-            Guid perfEppGuid = new Guid("36687f9e-e3a5-4dbf-b1dc-15eb381c6863");
-            Dictionary<uint, Tuple<uint?, uint?>> energyPerfPreference;
-            bool foundIssue = false;
+            // Read the XML file
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            string fileName = PPMSettingRulesXMLFile; 
+            XmlDocument doc = new XmlDocument();
+            doc.Load(fileName);
 
-            powSettings.TryGetValue(perfEppGuid, out energyPerfPreference);
-
-            if (energyPerfPreference != null && energyPerfPreference.Count != 0)
+            // Parse the XML file
+            // Iterate over all the profiles
+            foreach (XmlNode node in doc.DocumentElement.ChildNodes)
             {
-                foreach (var profile in energyPerfPreference)
+                if (node.Name.Equals("profile"))
                 {
-                    if (profileNames.ContainsKey(profile.Key))
+                    Guid? profileGuid = null;
+                    List<Tuple<Guid, uint?, uint?, uint?, uint?>> listSettings = new List<Tuple<Guid, uint?, uint?, uint?, uint?>>();
+
+                    foreach (XmlNode profileNode in node)
                     {
-                        switch (profileNames[profile.Key].Item2)
+                        // Get the GUID of the profile
+                        if (profileNode.Name.Equals("profileGuid"))
                         {
-                            case "HighQoS":
-                                qosValues.Add(QOS_LEVEL.High, profile.Value);
-                                break;
-                            case "MediumQoS":
-                                qosValues.Add(QOS_LEVEL.Medium, profile.Value);
-                                break;
-                            case "LowQoS":
-                                qosValues.Add(QOS_LEVEL.Low, profile.Value);
-                                break;
-                            case "UtilityQoS":
-                                qosValues.Add(QOS_LEVEL.Utility, profile.Value);
-                                break;
-                            case "EcoQoS":
-                                qosValues.Add(QOS_LEVEL.Eco, profile.Value);
-                                break;
-                            //case "MultimediaQoS":
-                            //    qosValues.Add(QOS_LEVEL.Multimedia, profile.Value);
-                            //    break;
+                            profileGuid = new Guid(profileNode.InnerText.ToString());
+                        }
+                        else if (profileNode.Name.Equals("settings"))
+                        {
+                            // Iterate over all the settings of the profile
+                            foreach (XmlNode settingNode in profileNode)
+                            {
+                                if (settingNode.Name.Equals("setting"))
+                                {
+                                    Guid? settingGuid = null;
+                                    uint? acMin = null;
+                                    uint? acMax = null;
+                                    uint? dcMin = null;
+                                    uint? dcMax = null;
+
+                                    foreach (XmlNode ppmSetting in settingNode)
+                                    {
+                                        if (ppmSetting.Name.Equals("settingGuid"))
+                                        {
+                                            settingGuid = new Guid(ppmSetting.InnerText.ToString());
+                                        }
+                                        else if (ppmSetting.Name.Equals("settingAcDcValues"))
+                                        {
+                                            //Console.Out.WriteLine();
+                                            foreach (XmlNode settingValueRule in ppmSetting)
+                                            {
+                                                if (settingValueRule.Name.Equals("acMinValue"))
+                                                {
+                                                    acMin = Convert.ToUInt32(settingValueRule.InnerText);
+                                                }
+                                                else if (settingValueRule.Name.Equals("dcMinValue"))
+                                                {
+                                                    dcMin = Convert.ToUInt32(settingValueRule.InnerText);
+                                                }
+                                                else if (settingValueRule.Name.Equals("acMaxValue"))
+                                                {
+                                                    acMax = Convert.ToUInt32(settingValueRule.InnerText);
+                                                }
+                                                else if (settingValueRule.Name.Equals("dcMaxValue"))
+                                                {
+                                                    dcMax = Convert.ToUInt32(settingValueRule.InnerText);
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // A PPM setting is parsed in the XML file 
+                                    // Add it into the list od settings of the profile profileGuid
+                                    if (settingGuid.HasValue)
+                                    {
+                                        listSettings.Add(new Tuple<Guid, uint?, uint?, uint?, uint?>(settingGuid.Value, acMin, acMax, dcMin, dcMax));
+                                    }
+                                }
+                            }
+
+                            // All the settings of the profile profileGuid are parsed in the XML file
+                            // Add a validation rule for this profile
+                            if (profileGuid.HasValue)
+                            {
+                                ValidationRules.Add(profileGuid.Value, listSettings);
+                            }
                         }
                     }
                 }
             }
+        }
 
-            if (qosValues.Count != 0)
+        /// <summary>
+        /// This method validates the PPM settings using the rules specified in the XML file:
+        /// (1) Validate that all the PPM settings are set across the profile (take into account the order of inheritance of the profiles)
+        /// (2) No inversions between the profiles (e.g. Default profile EPP should be <= LowQoS profile EPP)
+        /// (3) The Min/Max bound rules of each setting are respected
+        /// 
+        /// </summary>
+        public static void ValidatePPMSettings(
+            Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>> powSettings,
+            Dictionary<uint, Tuple<string, string, Guid>> profileNames,
+            Dictionary<Guid, string> GuidToFriendlyName,
+            List<string> results
+            )
+        {
+            foreach (DictionaryEntry profile in OrderedProfileHierarchy)
             {
-                var HighQoSLevel = qosValues.First();
-                for (int index = 0; index < qosValues.Count; index++)
+                // Check if this profile should be validated
+                Guid profileGuid = (Guid)profile.Key;
+                if (!ValidationRules.ContainsKey(profileGuid))
+                    continue;
+
+
+                // Get the friendly name of the profile
+                string profileName;
+                GuidToFriendlyName.TryGetValue(profileGuid, out profileName);
+
+                // Iterate over the PPM settings to validate for this profile
+                foreach (var setting in ValidationRules[profileGuid])
                 {
-                    // Validate that DC EPP values are more efficient than AC.
-                    if (qosValues.ElementAt(index).Value.Item1 > qosValues.ElementAt(index).Value.Item2)
+                    Guid settingGuid = setting.Item1;
+                    string settingName;
+                    uint? acValue = null;
+                    uint? dcValue = null;
+                    Guid? acParentProfileGuid = null;
+                    Guid? dcParentProfileGuid = null;
+
+                    uint? acParentSettingValue = null;
+                    uint? dcParentSettingValue = null;
+
+                    // Get the friendly name of the PPM setting
+                    GuidToFriendlyName.TryGetValue(settingGuid, out settingName);
+
+                    // Validate that the setting is set for any profile 
+                    if (!powSettings.ContainsKey(settingGuid))
                     {
-                        flags.EPPAcDc.Add(qosValues.ElementAt(index).Key.ToString(), 1);
-                        results.Add(String.Format("EPP: AC value of {0}Qos is more efficient than DC value. AC = {1} | DC = {2}", qosValues.ElementAt(index).Key.ToString(), qosValues.ElementAt(index).Value.Item1, qosValues.ElementAt(index).Value.Item2));
+                        results.Add($"ERROR : {profileName} : {settingName} : AC/DC : Setting is not set in the profile and in any profile of the PPKG.");
+                        continue;
+                    }
+
+                    var profile_id = profileNames.FirstOrDefault(x => x.Value.Item3 == profileGuid).Key;
+                    if (powSettings[settingGuid].ContainsKey(profile_id))
+                    {
+                        // Get the AC/DC values
+                        acValue = powSettings[settingGuid][profile_id].Item1;
+                        dcValue = powSettings[settingGuid][profile_id].Item2;
+                    }
+
+                    // Default profile must have a value for this setting
+                    if (profileGuid == GuidDefault)
+                    {
+                        // Check the AC mode setting
+                        if (!acValue.HasValue)
+                            results.Add($"ERROR : {profileName} : {settingName} : AC : Setting is not set in the profile.");
+                       
+                        // Check the DC mode setting
+                        if (!dcValue.HasValue)
+                            results.Add($"ERROR : {profileName} : {settingName} : DC : Setting is not set in the profile.");
+                    }
+                    else
+                    {
+                        // This is not the default profile ==> the profile has a parent profile
+                        // Find the value of the setting for the parent profile
+                        FindSettingInParentProfiles(true, profileGuid, settingGuid, powSettings, profileNames, ref acParentProfileGuid, ref acParentSettingValue);
+                        FindSettingInParentProfiles(false, profileGuid, settingGuid, powSettings, profileNames, ref dcParentProfileGuid, ref dcParentSettingValue);
+
+                        // Get the names of the parent profiles
+                        string acParentProfileName = "";
+                        if (acParentProfileGuid.HasValue)
+                            GuidToFriendlyName.TryGetValue(acParentProfileGuid.Value, out acParentProfileName);
+
+
+                        string dcParentProfileName = "";
+                        if (dcParentProfileGuid.HasValue)
+                            GuidToFriendlyName.TryGetValue(dcParentProfileGuid.Value, out dcParentProfileName);
+
+                        // Validate the AC value
+                        if (!acValue.HasValue)
+                        {
+                            // Check the setting is set for one of the parent profile
+                            if (acParentProfileGuid.HasValue && acParentSettingValue.HasValue)
+                            {
+                                results.Add($"WARNING : {profileName} : {settingName} : AC : Setting is not set in the profile. It inherits the value {acParentSettingValue.Value.ToString()} set for the profile {acParentProfileName}");
+                            }
+                            else
+                            {
+                                results.Add($"ERROR : {profileName} : {settingName} : AC : Setting is not set in the profile and in any of its parent profiles.");
+                            }
+                        }
+                        else
+                        {
+                            // Check inversions
+                            if (acParentSettingValue.HasValue)
+                            {
+                                if (!ValidateInversions(settingGuid, acValue.Value, acParentSettingValue.Value))
+                                {
+                                    results.Add($"ERROR : {profileName} : {settingName} : AC : The setting value is more agressive than the setting used for the parent profile {acParentProfileName} ({acValue} vs. {acParentSettingValue})");
+                                }
+                            }
+                        }
+
+                        // Validate the DC value
+                        if (!dcValue.HasValue)
+                        {
+                            if (dcParentProfileGuid.HasValue && dcParentSettingValue.HasValue)
+                            {
+                                results.Add($"WARNING : {profileName} : {settingName} : DC : Setting is not set in the profile. It inherits the value {dcParentSettingValue.Value.ToString()} set for the profile {dcParentProfileName}");
+                            }
+                            else
+                            {
+                                results.Add($"ERROR : {profileName} : {settingName} : DC : Setting is not set in the profile and in any of its parent profiles.");
+                            }
+                        }
+                        else
+                        {
+                            // Check inversions
+                            if (dcParentSettingValue.HasValue)
+                            {
+                                if (!ValidateInversions(settingGuid, dcValue.Value, dcParentSettingValue.Value))
+                                {
+                                    results.Add($"ERROR : {profileName} : {settingName} : DC : The setting value is more agressive than the setting used for the parent profile {dcParentProfileName} ({dcValue} vs. {dcParentSettingValue})");
+                                }
+                            }
+                        }
+                    }
+
+                    // Validate the setting against the Min/Max bounds 
+
+                    // AC MinValue rule
+                    if (setting.Item2.HasValue)
+                    {
+                        if (!ValidateMinMaxBoundRules(acValue, acParentSettingValue, setting.Item2.Value, false))
+                        {
+                            uint value = (acValue.HasValue) ? acValue.Value : acParentSettingValue.Value;
+                            results.Add($"ERROR : {profileName} : {settingName} : AC : Setting value {value} < min bound {setting.Item2.Value.ToString()}");
+                        }
+                    }
+
+                    // AC MaxValue rule
+                    if (setting.Item3.HasValue)
+                    {
+                        if (!ValidateMinMaxBoundRules(acValue, acParentSettingValue, setting.Item3.Value, true))
+                        {
+                            uint value = (acValue.HasValue) ? acValue.Value : acParentSettingValue.Value;
+                            results.Add($"ERROR : {profileName} : {settingName} : AC : Setting value  {value} > max bound {setting.Item3.Value.ToString()}");
+                        }
+                    }
+
+                    // DC MinValue rule
+                    if (setting.Item4.HasValue)
+                    {
+                        if (!ValidateMinMaxBoundRules(dcValue, dcParentSettingValue, setting.Item4.Value, false))
+                        {
+                            uint value = (dcValue.HasValue) ? dcValue.Value : dcParentSettingValue.Value;
+                            results.Add($"ERROR : {profileName} : {settingName} : DC : Setting value {value} < min bound {setting.Item4.Value.ToString()}");
+                        }
+                    }
+
+                    // DC MaxValue rule
+                    if (setting.Item5.HasValue)
+                    {
+                        if (!ValidateMinMaxBoundRules(dcValue, dcParentSettingValue, setting.Item5.Value, true))
+                        {
+                            uint value = (dcValue.HasValue) ? dcValue.Value : dcParentSettingValue.Value;
+                            results.Add($"ERROR : {profileName} : {settingName} : DC : Setting value {value} > max bound {setting.Item5.Value.ToString()}");
+                        }
                     }
                 }
+            }
+        }
 
-                for (int index = 1; index < qosValues.Count; index++)
+        /// <summary>
+        /// This method returns false if there is inversion between the PPM profiles 
+        /// </summary>
+        public static bool ValidateInversions(
+            Guid settingGuid,
+            uint settingValue,
+            uint parentSettingValue
+            )
+        {
+            // EPP
+            if (settingGuid == GuidEPP)
+            {
+                if (settingValue < parentSettingValue)
+                    return false;
+            }
+
+            // FrequencyCap
+            else if (settingGuid == GuidFrequencyCap)
+            {
+                if (settingValue == 0 && parentSettingValue > 0) 
+                    return false;
+                if (parentSettingValue != 0 && settingValue > parentSettingValue) 
+                    return false;
+            }
+
+            // Min/Max Cores
+            else if (settingGuid == GuidCPMaxCores || settingGuid == GuidCPMinCores)
+            {
+                if (settingValue > parentSettingValue)
+                    return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// This method returns false if the rules of min/max bounds are not satisfied 
+        /// </summary>
+        public static bool ValidateMinMaxBoundRules(
+            uint? settingValue,
+            uint? parentSettingValue,
+            uint targetValue,
+            bool compareToMax
+            )
+        {
+            uint? value = null;
+
+            if (settingValue.HasValue)
+                value = settingValue;
+            else if (parentSettingValue.HasValue)
+                value = parentSettingValue;
+
+            if (value.HasValue)
+            {
+                if (compareToMax && value.Value > targetValue)
+                    return false;
+
+                if (!compareToMax && value.Value < targetValue)
+                    return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Given a PPM setting and a PPM profile, this method retrieves the parent profile for which the PPM setting is set (i.e., has a value). 
+        /// </summary>
+        public static void FindSettingInParentProfiles(
+            bool ac,
+            Guid profileGuid,
+            Guid settingGuid,
+            Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>> powSettings,
+            Dictionary<uint, Tuple<string, string, Guid>> profileNames,
+            ref Guid? parentProfileGuid,
+            ref uint? parentSettingValue
+            )
+
+        {
+            Guid tempProfileGuid = profileGuid;
+            Guid tempParentProfileGuid;
+            uint? value = null;
+ 
+            if (!powSettings.ContainsKey(settingGuid))
+            {
+                return;
+            }
+
+            while (true)
+            {
+                if (tempProfileGuid == GuidDefault)
                 {
-
-                    // Multimedia logic still need to work on
-
-                    for (int revIndex = index - 1; revIndex >= 0; revIndex--)
+                    // Default profile doesn't have parents 
+                    break;
+                }
+                else
+                {
+                    // Get the parent profile
+                    tempParentProfileGuid = (Guid)OrderedProfileHierarchy[tempProfileGuid];
+                    var parentProfileId = profileNames.FirstOrDefault(x => x.Value.Item3 == tempParentProfileGuid).Key;
+                    if (powSettings[settingGuid].ContainsKey(parentProfileId))
                     {
-                        if (qosValues.ElementAt(index).Value.Item1 < qosValues.ElementAt(revIndex).Value.Item1)
-                        {
-                            foundIssue = true;
-                            flags.QoSPolicyAC.Add((qosValues.ElementAt(index).Key).ToString(), 1);
-                            results.Add(String.Format("EPP: AC {0}Qos is lower than {1}Qos. {0} = {2} | {1} = {3}", qosValues.ElementAt(index).Key.ToString(), qosValues.ElementAt(revIndex).Key.ToString(), qosValues.ElementAt(index).Value.Item1, qosValues.ElementAt(revIndex).Value.Item1));
-                        }
-                        if (qosValues.ElementAt(index).Value.Item2 < qosValues.ElementAt(revIndex).Value.Item2)
-                        {
-                            foundIssue = true;
-                            flags.QoSPolicyDC.Add((qosValues.ElementAt(index).Key).ToString(), 1);
-                            results.Add(String.Format("EPP: DC {0}Qos is lower than {1}Qos. {0} = {2} | {1} = {3}", qosValues.ElementAt(index).Key.ToString(), qosValues.ElementAt(revIndex).Key.ToString(), qosValues.ElementAt(index).Value.Item2, qosValues.ElementAt(revIndex).Value.Item2));
-                        }
-                        if (foundIssue)
-                        {
-                            foundIssue = false;
-                            break;
-                        }
+                        // Get the value of the parent profile
+                        if (ac)
+                            value = powSettings[settingGuid][parentProfileId].Item1;
+                        else
+                            value = powSettings[settingGuid][parentProfileId].Item2;
+                    }
+
+                    if (value.HasValue)
+                    {
+                        // Setting found in one of the parent profiles
+                        parentProfileGuid = tempParentProfileGuid;
+                        parentSettingValue = value;
+                        break;
+                    }
+                    else
+                    {
+                        // The direct parent doesn’t have the setting set
+                        // Go higher in the hierarchy of the profiles
+                        tempProfileGuid = tempParentProfileGuid;
                     }
                 }
             }

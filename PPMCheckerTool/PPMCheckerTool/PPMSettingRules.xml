@@ -1,0 +1,109 @@
+<root>
+	<!--Default profile-->
+	<profile>
+		<profileGuid> 00000000-0000-0000-0000-000000000000 </profileGuid>			
+		<settings>
+			<!--EPP-->
+			<setting>
+				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6863 </settingGuid>
+				<settingAcDcValues>
+					<acMinValue> 50 </acMinValue>
+					<dcMinValue> 70 </dcMinValue>
+					<acMaxValue> 70 </acMaxValue>
+					<dcMaxValue> 79 </dcMaxValue>
+				</settingAcDcValues>
+			</setting>
+
+			<!--Frequency Cap-->
+			<setting>
+				<settingGuid> 75b0ae3f-bce0-45a7-8c89-c9611c25e100 </settingGuid>
+			</setting>
+			
+		</settings>
+	</profile>
+
+	<!--LowQoS profile-->
+	<profile> 
+		<profileGuid> c04a802d-2205-4910-ae98-3b51e3bb72f2 </profileGuid>			
+		<settings>
+			<!--EPP-->
+			<setting>
+				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6863 </settingGuid>
+			</setting>
+			<!--Frequency Cap-->
+			<setting>
+				<settingGuid> 75b0ae3f-bce0-45a7-8c89-c9611c25e100 </settingGuid>
+			</setting>
+		</settings>
+	</profile>
+
+	<!--EcoQoS profile-->
+	<profile>
+		<profileGuid> 336c7511-f109-4172-bb3a-3ea51f815ada </profileGuid>
+		<settings>
+			
+			<!--EPP-->
+			<setting>
+				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6863 </settingGuid>
+			</setting>
+			
+			<!--Frequency Cap-->
+			<setting>
+				<settingGuid> 75b0ae3f-bce0-45a7-8c89-c9611c25e100 </settingGuid>
+			</setting>
+		</settings>
+	</profile>
+
+	<!--UtilityQoS profile-->
+	<profile>
+		<profileGuid> 33cc3a0d-45ee-43ca-86c4-695bfc9a313b </profileGuid>
+		<settings>
+			
+			<!--EPP-->
+			<setting>
+				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6863 </settingGuid>
+			</setting>
+			
+			<!--Frequency Cap-->
+			<setting>
+				<settingGuid> 75b0ae3f-bce0-45a7-8c89-c9611c25e100 </settingGuid>
+			</setting>
+		</settings>
+	</profile>
+
+	<!--Standby profile-->
+	<profile>
+		
+		<profileGuid> 8bc6262c-c026-411d-ae3b-7e2f70811a13 </profileGuid>
+		<settings>
+			
+			<!--EPP-->
+			<setting>
+				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6863 </settingGuid>
+			</setting>
+			
+			<!--Frequency Cap-->
+			<setting>
+				<settingGuid> 75b0ae3f-bce0-45a7-8c89-c9611c25e100 </settingGuid>
+			</setting>
+		</settings>
+	</profile>
+
+	<!--Constrained profile-->
+	<profile>
+		<profileGuid> ee1e4f72-e368-46b1-b3c6-5048b11c2dbd </profileGuid>
+		<settings>
+			
+			<!--EPP-->
+			<setting>
+				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6863 </settingGuid>
+			</setting>
+			
+			<!--Frequency Cap-->
+			<setting>
+				<settingGuid> 75b0ae3f-bce0-45a7-8c89-c9611c25e100 </settingGuid>
+			</setting>
+		</settings>
+	</profile>
+
+</root>
