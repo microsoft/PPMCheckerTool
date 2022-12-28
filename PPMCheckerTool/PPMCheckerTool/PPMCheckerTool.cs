@@ -38,6 +38,7 @@ using System.Collections;
 using System.Collections.Specialized;
 using System.Linq.Expressions;
 using System.Xml;
+using System.CodeDom;
 
 namespace PPMCheckerTool
 {
@@ -89,10 +90,10 @@ namespace PPMCheckerTool
             { GuidGameMode,  GuidDefault },
         };
 
-        // Data Structures that store the validation rules
-
-        // Profiles to validate, and PPM settings to validate for each profile 
-        static public Dictionary<Guid, List<Guid>> RulesPerProfileSettings = new Dictionary<Guid, List<Guid>>();
+        // Validation rules 
+        // Maps ProfileGuid --> (SettingGuid, AC MinValue, AC MaxValue, DC MinValue, DC MaxValue)
+        static public Dictionary <Guid, List<Tuple <Guid, uint? , uint?, uint?, uint? >>> ValidationRules 
+            = new Dictionary<Guid, List<Tuple<Guid, uint?, uint?, uint?, uint? >>>();
 
         // Class for settings values
         public class SettingValues
@@ -367,58 +368,102 @@ namespace PPMCheckerTool
                 ReadValidationRules();
 
                 // Validate PPM settings
-                ValidatePPMSetting(powSettings, profileNames, GuidToFriendlyName, results);
+                ValidatePPMSettings(powSettings, profileNames, GuidToFriendlyName, results);
 
                 WriteOutput(results, outputPath, true); // Always No header for now
             }
         }
 
         /// <summary>
-        /// This method reads the validation rules   
+        /// This method reads the validation rules  
         /// The validation rules are set in an XML file
         /// 
         /// </summary>
         public static void ReadValidationRules()
         {
+            // Read the XML file
             Assembly assembly = Assembly.GetExecutingAssembly();
-
-            //string fileName = $"{assembly.GetName().Name}.{PPMSettingRulesXMLFile}";
             string fileName = PPMSettingRulesXMLFile; 
             XmlDocument doc = new XmlDocument();
             doc.Load(fileName);
 
-
             // Parse the XML file
+            // Iterate over all the profiles
             foreach (XmlNode node in doc.DocumentElement.ChildNodes)
             {
-                // Parse the profiles
-                Guid? profileGuid = null;
-                List<Guid> listSettings = new List<Guid>();
-
-                foreach (XmlNode profileNode in node)
+                if (node.Name.Equals("profile"))
                 {
-                    // Get the GUID of the profile
-                    if (profileNode.Name.Equals("profileGuid"))
-                    {
-                        profileGuid = new Guid(profileNode.InnerText.ToString());
-                    }
+                    Guid? profileGuid = null;
+                    List<Tuple<Guid, uint?, uint?, uint?, uint?>> listSettings = new List<Tuple<Guid, uint?, uint?, uint?, uint?>>();
 
-                    if (profileNode.Name.Equals("settings"))
-                    { 
-                        // Get the settings that we should validate for the profile
-                        foreach (XmlNode settingNode in profileNode)
+                    foreach (XmlNode profileNode in node)
+                    {
+                        // Get the GUID of the profile
+                        if (profileNode.Name.Equals("profileGuid"))
                         {
-                            if (settingNode.Name.Equals("settingGuid"))
+                            profileGuid = new Guid(profileNode.InnerText.ToString());
+                        }
+                        else if (profileNode.Name.Equals("settings"))
+                        {
+                            // Iterate over all the settings of the profile
+                            foreach (XmlNode settingNode in profileNode)
                             {
-                                Guid settingGuid = new Guid(settingNode.InnerText.ToString());
-                                listSettings.Add(settingGuid);
+                                if (settingNode.Name.Equals("setting"))
+                                {
+                                    Guid? settingGuid = null;
+                                    uint? acMin = null;
+                                    uint? acMax = null;
+                                    uint? dcMin = null;
+                                    uint? dcMax = null;
+
+                                    foreach (XmlNode ppmSetting in settingNode)
+                                    {
+                                        if (ppmSetting.Name.Equals("settingGuid"))
+                                        {
+                                            settingGuid = new Guid(ppmSetting.InnerText.ToString());
+                                        }
+                                        else if (ppmSetting.Name.Equals("settingAcDcValues"))
+                                        {
+                                            //Console.Out.WriteLine();
+                                            foreach (XmlNode settingValueRule in ppmSetting)
+                                            {
+                                                if (settingValueRule.Name.Equals("acMinValue"))
+                                                {
+                                                    acMin = Convert.ToUInt32(settingValueRule.InnerText);
+                                                }
+                                                else if (settingValueRule.Name.Equals("dcMinValue"))
+                                                {
+                                                    dcMin = Convert.ToUInt32(settingValueRule.InnerText);
+                                                }
+                                                else if (settingValueRule.Name.Equals("acMaxValue"))
+                                                {
+                                                    acMax = Convert.ToUInt32(settingValueRule.InnerText);
+                                                }
+                                                else if (settingValueRule.Name.Equals("dcMaxValue"))
+                                                {
+                                                    dcMax = Convert.ToUInt32(settingValueRule.InnerText);
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // A PPM setting is parsed in the XML file 
+                                    // Add it into the list od settings of the profile profileGuid
+                                    if (settingGuid.HasValue)
+                                    {
+                                        listSettings.Add(new Tuple<Guid, uint?, uint?, uint?, uint?>(settingGuid.Value, acMin, acMax, dcMin, dcMax));
+                                    }
+                                }
+                            }
+
+                            // All the settings of the profile profileGuid are parsed in the XML file
+                            // Add a validation rule for this profile
+                            if (profileGuid.HasValue)
+                            {
+                                ValidationRules.Add(profileGuid.Value, listSettings);
                             }
                         }
                     }
-
-                    // Add a new rule: Profile --> List of settings to validate
-                    if (profileGuid.HasValue && listSettings.Count > 0)
-                        RulesPerProfileSettings.Add(profileGuid.Value, listSettings);
                 }
             }
         }
@@ -426,36 +471,49 @@ namespace PPMCheckerTool
         /// <summary>
         /// This method validates the PPM settings using the rules specified in the XML file:
         /// (1) Validate that all the PPM settings are set across the profile (take into account the order of inheritance of the profiles)
-        /// (2) No inversions between the profiles (e.g. Default profile EPP should be <= LowQoS profile EPP) 
+        /// (2) No inversions between the profiles (e.g. Default profile EPP should be <= LowQoS profile EPP)
+        /// (3) The Min/Max bound rules of each setting are respected
+        /// 
         /// </summary>
-        public static void ValidatePPMSetting(Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>> powSettings,
+        public static void ValidatePPMSettings(
+            Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>> powSettings,
             Dictionary<uint, Tuple<string, string, Guid>> profileNames,
             Dictionary<Guid, string> GuidToFriendlyName,
-            List<string> results)
+            List<string> results
+            )
         {
             foreach (DictionaryEntry profile in OrderedProfileHierarchy)
             {
                 // Check if this profile should be validated
                 Guid profileGuid = (Guid)profile.Key;
-                if (!RulesPerProfileSettings.ContainsKey(profileGuid))
+                if (!ValidationRules.ContainsKey(profileGuid))
                     continue;
 
+
+                // Get the friendly name of the profile
                 string profileName;
                 GuidToFriendlyName.TryGetValue(profileGuid, out profileName);
 
                 // Iterate over the PPM settings to validate for this profile
-                foreach (Guid settingGuid in RulesPerProfileSettings[profileGuid])
+                foreach (var setting in ValidationRules[profileGuid])
                 {
+                    Guid settingGuid = setting.Item1;
                     string settingName;
                     uint? acValue = null;
                     uint? dcValue = null;
+                    Guid? acParentProfileGuid = null;
+                    Guid? dcParentProfileGuid = null;
 
+                    uint? acParentSettingValue = null;
+                    uint? dcParentSettingValue = null;
+
+                    // Get the friendly name of the PPM setting
                     GuidToFriendlyName.TryGetValue(settingGuid, out settingName);
 
-                    // Validate that the setting is set in AC/DC modes
+                    // Validate that the setting is set for any profile 
                     if (!powSettings.ContainsKey(settingGuid))
                     {
-                        results.Add(String.Format("ERROR: Setting {0} is not set in any of the profiles", settingName));
+                        results.Add($"ERROR : {profileName} : {settingName} : AC/DC : Setting is not set in the profile and in any profile of the PPKG.");
                         continue;
                     }
 
@@ -472,84 +530,118 @@ namespace PPMCheckerTool
                     {
                         // Check the AC mode setting
                         if (!acValue.HasValue)
-                            results.Add(String.Format("ERROR: Setting {0} is not set for the Default profile in AC mode.", settingName));
-
+                            results.Add($"ERROR : {profileName} : {settingName} : AC : Setting is not set in the profile.");
+                       
                         // Check the DC mode setting
                         if (!dcValue.HasValue)
-                            results.Add(String.Format("ERROR: Setting {0} is not set for the Default profile in DC mode.", settingName));
-
-                        continue;
-                    }
-
-                    // This is not the default profile 
-                    // Get the value of the setting  from the parent profiles
-                    Guid? acParentProfileGuid = null;
-                    Guid? dcParentProfileGuid = null;
-
-                    uint? acParentSettingValue = null;
-                    uint? dcParentSettingValue = null;
-
-                    // Find the value of the setting for the parent profile
-                    FindSettingInParentProfiles(true, profileGuid, settingGuid, powSettings, profileNames, ref acParentProfileGuid, ref acParentSettingValue);
-                    FindSettingInParentProfiles(false, profileGuid, settingGuid, powSettings, profileNames, ref dcParentProfileGuid, ref dcParentSettingValue);
-
-                    // Get the names of the parent profiles
-                    string acParentProfileName="";
-                    if (acParentProfileGuid.HasValue)
-                        GuidToFriendlyName.TryGetValue(acParentProfileGuid.Value, out acParentProfileName);
-
-
-                    string dcParentProfileName="";
-                    if (dcParentProfileGuid.HasValue)
-                        GuidToFriendlyName.TryGetValue(dcParentProfileGuid.Value, out dcParentProfileName);
-                    
-                    // Validate the AC value
-                    if (!acValue.HasValue)
-                    {
-                        // Check the setting is set for one of the parent profile
-                        if (acParentProfileGuid.HasValue && acParentSettingValue.HasValue)
-                        {
-                            results.Add($"WARNING: Setting {settingName} is not set for the profile {profileName} in AC mode. It inherits the value {acParentSettingValue.Value.ToString()} set for the profile {acParentProfileName}");
-
-                        }
-                        else
-                        {
-                            results.Add($"ERROR: Setting {settingName} is not set for the profile {profileName} and in any of its parent profiles in AC mode");
-                        }
+                            results.Add($"ERROR : {profileName} : {settingName} : DC : Setting is not set in the profile.");
                     }
                     else
                     {
-                        // Check inversions
-                        if (acParentSettingValue.HasValue)
+                        // This is not the default profile ==> the profile has a parent profile
+                        // Find the value of the setting for the parent profile
+                        FindSettingInParentProfiles(true, profileGuid, settingGuid, powSettings, profileNames, ref acParentProfileGuid, ref acParentSettingValue);
+                        FindSettingInParentProfiles(false, profileGuid, settingGuid, powSettings, profileNames, ref dcParentProfileGuid, ref dcParentSettingValue);
+
+                        // Get the names of the parent profiles
+                        string acParentProfileName = "";
+                        if (acParentProfileGuid.HasValue)
+                            GuidToFriendlyName.TryGetValue(acParentProfileGuid.Value, out acParentProfileName);
+
+
+                        string dcParentProfileName = "";
+                        if (dcParentProfileGuid.HasValue)
+                            GuidToFriendlyName.TryGetValue(dcParentProfileGuid.Value, out dcParentProfileName);
+
+                        // Validate the AC value
+                        if (!acValue.HasValue)
                         {
-                            if (!ValidateInversions(settingGuid, acValue.Value, acParentSettingValue.Value))
+                            // Check the setting is set for one of the parent profile
+                            if (acParentProfileGuid.HasValue && acParentSettingValue.HasValue)
                             {
-                                results.Add($"ERROR: The value set in DC mode for Setting {settingName} in profile {profileName} is more agressive than profile {acParentProfileName}: ({acValue} vs. {acParentSettingValue})");
+                                results.Add($"WARNING : {profileName} : {settingName} : AC : Setting is not set in the profile. It inherits the value {acParentSettingValue.Value.ToString()} set for the profile {acParentProfileName}");
+                            }
+                            else
+                            {
+                                results.Add($"ERROR : {profileName} : {settingName} : AC : Setting is not set in the profile and in any of its parent profiles.");
+                            }
+                        }
+                        else
+                        {
+                            // Check inversions
+                            if (acParentSettingValue.HasValue)
+                            {
+                                if (!ValidateInversions(settingGuid, acValue.Value, acParentSettingValue.Value))
+                                {
+                                    results.Add($"ERROR : {profileName} : {settingName} : AC : The setting value is more agressive than the setting used for the parent profile {acParentProfileName} ({acValue} vs. {acParentSettingValue})");
+                                }
+                            }
+                        }
+
+                        // Validate the DC value
+                        if (!dcValue.HasValue)
+                        {
+                            if (dcParentProfileGuid.HasValue && dcParentSettingValue.HasValue)
+                            {
+                                results.Add($"WARNING : {profileName} : {settingName} : DC : Setting is not set in the profile. It inherits the value {dcParentSettingValue.Value.ToString()} set for the profile {dcParentProfileName}");
+                            }
+                            else
+                            {
+                                results.Add($"ERROR : {profileName} : {settingName} : DC : Setting is not set in the profile and in any of its parent profiles.");
+                            }
+                        }
+                        else
+                        {
+                            // Check inversions
+                            if (dcParentSettingValue.HasValue)
+                            {
+                                if (!ValidateInversions(settingGuid, dcValue.Value, dcParentSettingValue.Value))
+                                {
+                                    results.Add($"ERROR : {profileName} : {settingName} : DC : The setting value is more agressive than the setting used for the parent profile {dcParentProfileName} ({dcValue} vs. {dcParentSettingValue})");
+                                }
                             }
                         }
                     }
 
-                    // Validate the DC value
-                    if (!dcValue.HasValue)
+                    // Validate the setting against the Min/Max bounds 
+
+                    // AC MinValue rule
+                    if (setting.Item2.HasValue)
                     {
-                        if (dcParentProfileGuid.HasValue && dcParentSettingValue.HasValue)
+                        if (!ValidateMinMaxBoundRules(acValue, acParentSettingValue, setting.Item2.Value, false))
                         {
-                            results.Add($"WARNING: Setting {settingName} is not set for the profile {profileName} in DC mode. It inherits the value {dcParentSettingValue.Value.ToString()} set for the profile {dcParentProfileName}");
-                        }
-                        else
-                        {
-                            results.Add($"ERROR: Setting {settingName} is not set for the profile {profileName} and in any of its parent profiles in DC mode");
+                            uint value = (acValue.HasValue) ? acValue.Value : acParentSettingValue.Value;
+                            results.Add($"ERROR : {profileName} : {settingName} : AC : Setting value {value} < min bound {setting.Item2.Value.ToString()}");
                         }
                     }
-                    else
+
+                    // AC MaxValue rule
+                    if (setting.Item3.HasValue)
                     {
-                        // Check inversions
-                        if (dcParentSettingValue.HasValue)
+                        if (!ValidateMinMaxBoundRules(acValue, acParentSettingValue, setting.Item3.Value, true))
                         {
-                            if (!ValidateInversions(settingGuid, dcValue.Value, dcParentSettingValue.Value))
-                            {
-                                results.Add($"ERROR: The value set in DC mode for Setting {settingName} in profile {profileName} is more agressive than profile {dcParentProfileName}: ({dcValue} vs. {dcParentSettingValue})");
-                            }
+                            uint value = (acValue.HasValue) ? acValue.Value : acParentSettingValue.Value;
+                            results.Add($"ERROR : {profileName} : {settingName} : AC : Setting value  {value} > max bound {setting.Item3.Value.ToString()}");
+                        }
+                    }
+
+                    // DC MinValue rule
+                    if (setting.Item4.HasValue)
+                    {
+                        if (!ValidateMinMaxBoundRules(dcValue, dcParentSettingValue, setting.Item4.Value, false))
+                        {
+                            uint value = (dcValue.HasValue) ? dcValue.Value : dcParentSettingValue.Value;
+                            results.Add($"ERROR : {profileName} : {settingName} : DC : Setting value {value} < min bound {setting.Item4.Value.ToString()}");
+                        }
+                    }
+
+                    // DC MaxValue rule
+                    if (setting.Item5.HasValue)
+                    {
+                        if (!ValidateMinMaxBoundRules(dcValue, dcParentSettingValue, setting.Item5.Value, true))
+                        {
+                            uint value = (dcValue.HasValue) ? dcValue.Value : dcParentSettingValue.Value;
+                            results.Add($"ERROR : {profileName} : {settingName} : DC : Setting value {value} > max bound {setting.Item5.Value.ToString()}");
                         }
                     }
                 }
@@ -592,7 +684,36 @@ namespace PPMCheckerTool
         }
 
         /// <summary>
-        /// Given a PPM setting and a PPM profile, this method retrieves the parent profile for which the PMM setting is set (i.e., has a vlaue). 
+        /// This method returns false if the rules of min/max bounds are not satisfied 
+        /// </summary>
+        public static bool ValidateMinMaxBoundRules(
+            uint? settingValue,
+            uint? parentSettingValue,
+            uint targetValue,
+            bool compareToMax
+            )
+        {
+            uint? value = null;
+
+            if (settingValue.HasValue)
+                value = settingValue;
+            else if (parentSettingValue.HasValue)
+                value = parentSettingValue;
+
+            if (value.HasValue)
+            {
+                if (compareToMax && value.Value > targetValue)
+                    return false;
+
+                if (!compareToMax && value.Value < targetValue)
+                    return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Given a PPM setting and a PPM profile, this method retrieves the parent profile for which the PPM setting is set (i.e., has a value). 
         /// </summary>
         public static void FindSettingInParentProfiles(
             bool ac,
@@ -603,6 +724,7 @@ namespace PPMCheckerTool
             ref Guid? parentProfileGuid,
             ref uint? parentSettingValue
             )
+
         {
             Guid tempProfileGuid = profileGuid;
             Guid tempParentProfileGuid;

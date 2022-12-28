@@ -41,8 +41,14 @@
 		<ProjectReference Include="..\Common\Common.csproj" />
 	</ItemGroup>
 	<ItemGroup>
-		<EmbeddedResource Include="GuidToFriendlyName.csv" />
-		<EmbeddedResource Include="PPMSettingRules.xml" />
+		<EmbeddedResource Include="GuidToFriendlyName.csv">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</EmbeddedResource>
+	</ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="PPMSettingRules.xml">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</EmbeddedResource>
 	</ItemGroup>
 	<ItemGroup>
 		<Reference Include="System.Core" />
