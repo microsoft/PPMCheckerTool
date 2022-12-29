@@ -1,70 +1,157 @@
-﻿Write-Output "Running script..."
+﻿[Cmdletbinding()]
+Param(
+    [Parameter(Mandatory = $true)]
+    [string] $ExeLocation,
 
-cd "..\bin\Release\PPMCheckerTool\win-x64\publish\"
+    [Parameter(Mandatory = $true)]
+    [string] $OutputFilePath
+)
 
-Write-Output "Current Power mode"
-& "$PSScriptRoot\PowerMode.exe"
+process
+{
 
-#####################
-# RECOMMENDED
-#####################
-Write-Output "Changing Power mode to Default(Recommended) (00000000-0000-0000-0000-000000000000)"
-& "$PSScriptRoot\PowerMode.exe" 00000000-0000-0000-0000-000000000000
 
-wpr -start $PSScriptRoot\power.wprp
-Start-Sleep -Seconds 0.5
-wpr -stop "$PSScriptRoot\power_rec.etl"
+    Write-Output "Running script..."
 
-Write-Output "Running PPM Checker for Default Power scheme..."
+    try
+    {
+        cd $ExeLocation -ErrorAction Stop
+    }
+    catch [Exception]{
+        Write-Error $_
+        exit;
+    }
 
-& ".\PPMCheckerTool.exe" -i $PSScriptRoot\power_rec.etl -o $PSScriptRoot\output_rec.csv
+    Write-Output "Current Power mode"
+    & ".\SetSliderPowerMode.exe"
 
-Write-Output "Default(Recommended) power scheme done..."
+    #####################
+    # RECOMMENDED/BALANCED
+    #####################
+    Write-Output "Changing Power mode to Balanced(Recommended) (00000000-0000-0000-0000-000000000000)"
+    & ".\SetSliderPowerMode.exe" 00000000-0000-0000-0000-000000000000
 
-#####################
-# BETTER BATTERY
-#####################
-Write-Output "Changing Power mode to Better Battery"
-& "$PSScriptRoot\PowerMode.exe" BetterBattery
+    Write-Output "Taking ETW trace..."
+    try
+    {
+        wpr -start $PSScriptRoot\power.wprp
+        Start-Sleep -Seconds 0.5
+        wpr -stop "$PSScriptRoot\power_rec.etl"
+    }catch [Exception]{
+        Write-Error $_
+        exit
+    }
 
-wpr -start $PSScriptRoot\power.wprp
-Start-Sleep -Seconds 0.5
-wpr -stop "$PSScriptRoot\power_betterbattery.etl"
+    Write-Output "Running PPM Checker for Balanced Power scheme..."
+    
+    try
+    {
+        & ".\PPMCheckerTool.exe" -i $PSScriptRoot\power_rec.etl -o $OutputFilePath
+    }catch [Exception]{
+        Write-Error $_
+        exit;
+    }
 
-Write-Output "Running PPM Checker for Better Battery Power scheme..."
+    Write-Output "Balanced(Recommended) power scheme done..."
 
-& ".\PPMCheckerTool.exe" -i $PSScriptRoot\power_betterbattery.etl -o $PSScriptRoot\output_betterbattery.csv
+    #####################
+    # BETTER BATTERY
+    #####################
+    Write-Output "Changing Power mode to Better Battery"
+    & ".\SetSliderPowerMode.exe" BetterBattery
 
-Write-Output "Better Battery power scheme done..."
+    Write-Output "Taking ETW trace..."
+    try
+    {
+        wpr -start $PSScriptRoot\power.wprp
+        Start-Sleep -Seconds 0.5
+        wpr -stop "$PSScriptRoot\power_betterbattery.etl"
+    }catch [Exception]{
+        Write-Error $_
+        exit;
+    }
 
-#####################
-# BETTER PERFORMANCE
-#####################
-Write-Output "Changing Power mode to Better Performance"
-& "$PSScriptRoot\PowerMode.exe" BetterPerformance
+    Write-Output "Running PPM Checker for Better Battery Power scheme..."
 
-wpr -start $PSScriptRoot\power.wprp
-Start-Sleep -Seconds 0.5
-wpr -stop "$PSScriptRoot\power_betterperf.etl"
+    try
+    {
+        & ".\PPMCheckerTool.exe" -i $PSScriptRoot\power_betterbattery.etl -o $OutputFilePath
+    }catch [Exception]{
+        Write-Error $_
+        exit;
+    }
+    Write-Output "Better Battery power scheme done..."
 
-Write-Output "Running PPM Checker for Better Performance Power scheme..."
+    #####################
+    # BETTER PERFORMANCE
+    #####################
+    Write-Output "Changing Power mode to Better Performance"
+    & ".\SetSliderPowerMode.exe" BetterPerformance
 
-& ".\PPMCheckerTool.exe" -i $PSScriptRoot\power_betterperf.etl -o $PSScriptRoot\output_betterperf.csv
+    Write-Output "Taking ETW trace..."
+    try
+    {
+        wpr -start $PSScriptRoot\power.wprp
+        Start-Sleep -Seconds 0.5
+        wpr -stop "$PSScriptRoot\power_betterperf.etl"
+    }catch [Exception]{
+        Write-Error $_
+        exit;
+    }
 
-Write-Output "Better Performance power scheme done..."
+    Write-Output "Running PPM Checker for Better Performance Power scheme..."
 
-#####################
-# BEST PERFORMANCE
-#####################
-Write-Output "Changing Power mode to Best Performance"
-& "$PSScriptRoot\PowerMode.exe" BestPerformance
+    try
+    {
+        & ".\PPMCheckerTool.exe" -i $PSScriptRoot\power_betterperf.etl -o $OutputFilePath
+    }catch [Exception]{
+        Write-Error $_
+        exit;
+    }
 
-wpr -start $PSScriptRoot\power.wprp
-Start-Sleep -Seconds 0.5
-wpr -stop "$PSScriptRoot\power_bestperf.etl"
+    Write-Output "Better Performance power scheme done..."
 
-Write-Output "Running PPM Checker for Best Performance Power scheme..."
+    #####################
+    # BEST PERFORMANCE
+    #####################
+    Write-Output "Changing Power mode to Best Performance"
+    & ".\SetSliderPowerMode.exe" BestPerformance
 
-& ".\PPMCheckerTool.exe" -i $PSScriptRoot\power_bestperf.etl -o $PSScriptRoot\output_bestperf.csv
+    Write-Output "Taking ETW trace..."
+    try
+    {
+        wpr -start $PSScriptRoot\power.wprp
+        Start-Sleep -Seconds 0.5
+        wpr -stop "$PSScriptRoot\power_bestperf.etl"
+    }catch [Exception]{
+        Write-Error $_
+        exit;
+    }
 
-Write-Output "Best Performance power scheme done..."
+    Write-Output "Running PPM Checker for Best Performance Power scheme..."
+
+    try
+    {
+        & ".\PPMCheckerTool.exe" -i $PSScriptRoot\power_bestperf.etl -o $OutputFilePath
+    }catch [Exception]{
+        Write-Error $_
+        exit;
+    }
+
+    Write-Output "Best Performance power scheme done..."
+
+    #####################
+
+    Write-Output "Restoring power mode to Balanced"
+    Write-Output "Changing Power mode to Default(Recommended) (00000000-0000-0000-0000-000000000000)"
+    & ".\SetSliderPowerMode.exe" 00000000-0000-0000-0000-000000000000
+
+    try
+    {
+        cd $PSScriptRoot
+    }
+    catch [Exception]{
+        Write-Error $_
+        exit;
+    }
+}

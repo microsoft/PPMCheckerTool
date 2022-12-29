@@ -57,8 +57,5 @@
 		<None Update="@(None)">
 			<Visible Condition="'%(NuGetItemType)' == 'None'">false</Visible>
 		</None>
-		<None Update="Header.csv">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
 	</ItemGroup>
 </Project>
