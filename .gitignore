@@ -10,3 +10,10 @@ obj/
 launchSettings.json
 
 *.pubxml*
+
+*.EmbeddedPdbs*
+*.NGENPDB*
+*.etl
+
+PPMCheckerTool/Scripts/*.csv
+PPMCheckerTool/Scripts/*.bak

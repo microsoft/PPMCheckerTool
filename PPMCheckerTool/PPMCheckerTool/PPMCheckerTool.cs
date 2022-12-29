@@ -10,9 +10,8 @@ Abstract:
 
     What does this tool do?
 
-        TODO: Empty example project. Clone to create additional tools.
+    External executable tool that checks for less optimal PPM settings against an Good settings XML. Also, checks for inversions in settings values across profiles
 
-    This tool uses WPA Data Layer (https://osgwiki.com/wiki/WPA_Data_Layer).
 
 Author:
 
@@ -30,15 +29,11 @@ using System.Collections.Generic;
 using Microsoft.Windows.EventTracing;
 using Microsoft.Windows.EventTracing.Events;
 using Microsoft.Windows.EventTracing.Metadata;
-using Microsoft.Windows.EventTracing.Cpu;
-using Microsoft.Windows.EventTracing.Symbols;
 using Common;
 using System.Reflection;
 using System.Collections;
 using System.Collections.Specialized;
-using System.Linq.Expressions;
 using System.Xml;
-using System.CodeDom;
 
 namespace PPMCheckerTool
 {

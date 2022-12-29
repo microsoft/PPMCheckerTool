@@ -44,12 +44,11 @@
 		<EmbeddedResource Include="GuidToFriendlyName.csv">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</EmbeddedResource>
-	</ItemGroup>
-	<ItemGroup>
 		<EmbeddedResource Include="PPMSettingRules.xml">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</EmbeddedResource>
 	</ItemGroup>
+		
 	<ItemGroup>
 		<Reference Include="System.Core" />
 	</ItemGroup>
