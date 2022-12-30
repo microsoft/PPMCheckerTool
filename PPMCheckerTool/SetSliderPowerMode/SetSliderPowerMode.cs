@@ -36,9 +36,9 @@ namespace SetSliderPowerMode
                         {
                             Console.WriteLine("Best performance");
                         }
-                        else if (currentMode == PowerMode.BestPerformance)
+                        else if (currentMode == PowerMode.DefaultOverlay)
                         {
-                            Console.WriteLine("Best performance");
+                            Console.WriteLine("Default Overlay: Balanced (Non-Surface) / Recommended(Surface)");
                         }
                     }
                     else
@@ -69,10 +69,10 @@ namespace SetSliderPowerMode
                     {
                         powerMode = PowerMode.BestPerformance;
                     }
-                    else if (parameter == "Recommended".ToLower())
+                    else if (parameter == "Default".ToLower())
                     {
-                        powerMode = PowerMode.Recommended;
-                    }
+                        powerMode = PowerMode.DefaultOverlay;
+                    }   
                     else
                     {
                         try
@@ -125,7 +125,7 @@ namespace SetSliderPowerMode
         {
             Console.WriteLine(
                     "  PowerMode                    Report the current power mode\n" +
-                    "  PowerMode Recommended        Set the system to \"better battery\" mode\n" +
+                    "  PowerMode Default            Set the system to \"Default\" mode\n" +
                     "  PowerMode BetterBattery      Set the system to \"better battery\" mode\n" +
                     "  PowerMode BetterPerformance  Set the system to \"better performance\" mode\n" +
                     "  PowerMode BestPerformance    Set the system to \"best performance\" mode\n" +
@@ -155,9 +155,9 @@ namespace SetSliderPowerMode
             public static Guid BestPerformance = new Guid("ded574b5-45a0-4f42-8737-46345c09c238");
 
             /// <summary>
-            /// Recommended mode.
+            /// Default power overlay ("Balanced" for Non-Surface systems, "Recommended" for Surface systems).
             /// </summary>
-            public static Guid Recommended = new Guid("00000000-0000-0000-0000-000000000000");
+            public static Guid DefaultOverlay = new Guid("00000000-0000-0000-0000-000000000000");
         }
 
         /// <summary>
