@@ -38,9 +38,21 @@ namespace PPMCheckerTool
 {
     class PPMCheckerTool : BaseAnalyzer
     {
+        // Default Overlay Scheme
+        public const String DefaultOverlayScheme = "Default Overlay Scheme";
+
+        // Files
         private const String GUIDFriendlyNameFile = "GuidToFriendlyName.csv";
         private const String PPMSettingRulesXMLFile = "PPMSettingRules.xml";
-        public const String NoOverlay = "No Overlay";
+
+
+        // Overlay power schemes GUIDs
+        public static Guid GuidDefaultOverlay = new Guid("00000000-0000-0000-0000-000000000000");
+        public static Guid GuidBetterBatteryOverlay = new Guid("961CC777-2547-4F9D-8174-7D86181b8A7A");
+        public static Guid GuidBetterPerfOverlay = new Guid("381B4222-F694-41F0-9685-FF5BB260DF2E");
+        public static Guid GuidBestPerfOverlay = new Guid("DED574B5-45A0-4F42-8737-46345C09C238");
+        public static Guid GuidSurfaceBetterPerfOverlay = new Guid("3af9b8d9-7c97-431d-ad78-34a8bfea439f");
+
 
         // PPM settings GUIDs
         public static Guid GuidEPP = new Guid("36687f9e-e3a5-4dbf-b1dc-15eb381c6863");
@@ -193,6 +205,7 @@ namespace PPMCheckerTool
                 Guid RundownEffectiveOverlayPowerScheme = Guid.Empty;
                 String RundownPowerSchemeString = String.Empty;
                 String RundownEffectiveOverlayPowerSchemeString = String.Empty;
+                //String RundownEffectiveOverlayPowerSchemeString = String.Empty;
 
                 string QoSLevelName = "";
                 // Extract System Metadata, or other static rundown information that may be worth logging
@@ -337,9 +350,9 @@ namespace PPMCheckerTool
                         else if (genericEvent.TaskName.Equals("RundownEffectiveOverlayPowerScheme"))
                         {
                             RundownEffectiveOverlayPowerScheme = new Guid(genericEvent.Fields[0].AsGuid.ToString());
-                            if (RundownEffectiveOverlayPowerScheme == Guid.Empty) // No Overlay
+                            if (RundownEffectiveOverlayPowerScheme == Guid.Empty) // Out Of Box  Overlay
                             {
-                                RundownEffectiveOverlayPowerSchemeString = NoOverlay;
+                                RundownEffectiveOverlayPowerSchemeString = DefaultOverlayScheme;
                             }
                             else
                             {
@@ -354,7 +367,7 @@ namespace PPMCheckerTool
                 results.Add("Rundown Effective Power Overlay: " + RundownEffectiveOverlayPowerSchemeString);
 
                 // Read the validation rules
-                ReadValidationRules();
+                ReadValidationRules(RundownEffectiveOverlayPowerScheme);
 
                 // Validate PPM settings
                 ValidatePPMSettings(powSettings, profileNames, GuidToFriendlyName, results);
@@ -368,7 +381,9 @@ namespace PPMCheckerTool
         /// The validation rules are set in an XML file
         /// 
         /// </summary>
-        public static void ReadValidationRules()
+        public static void ReadValidationRules(
+            Guid rundownEffectiveOverlayPowerScheme
+            )
         {
             // Read the XML file
             Assembly assembly = Assembly.GetExecutingAssembly();
@@ -377,81 +392,81 @@ namespace PPMCheckerTool
             doc.Load(fileName);
 
             // Parse the XML file
-            // Iterate over all the profiles
-            foreach (XmlNode node in doc.DocumentElement.ChildNodes)
+
+            // Parse the power overlays
+            XmlNodeList overlayNodeList = doc.SelectNodes("/validationRules/overlay");
+            foreach (XmlNode overlayNode in overlayNodeList)
             {
-                if (node.Name.Equals("profile"))
+                // Get the GUID of the Overlay 
+                if (overlayNode["overlayGuid"] == null) 
+                    continue;
+
+                Guid overlayGuid = new Guid(overlayNode["overlayGuid"].InnerText);
+
+                // We load only the rules of the effective power overlay 
+                if (overlayGuid != rundownEffectiveOverlayPowerScheme) 
+                    continue;
+
+                // Get the list of profiles to validate
+                XmlNodeList profileNodeList = overlayNode.SelectNodes("profile");
+
+                // Iterate over all the profiles
                 {
-                    Guid? profileGuid = null;
-                    List<Tuple<Guid, uint?, uint?, uint?, uint?>> listSettings = new List<Tuple<Guid, uint?, uint?, uint?, uint?>>();
-
-                    foreach (XmlNode profileNode in node)
+                    foreach (XmlNode profieNode in profileNodeList)
                     {
-                        // Get the GUID of the profile
-                        if (profileNode.Name.Equals("profileGuid"))
+                        // Get the GUID of the profile 
+                        if (profieNode["profileGuid"] == null)
+                            continue;
+
+                        Guid profileGuid = new Guid(profieNode["profileGuid"].InnerText);
+                        List<Tuple<Guid, uint?, uint?, uint?, uint?>> listSettings = new List<Tuple<Guid, uint?, uint?, uint?, uint?>>();
+
+                        // Get the list of settings to validate
+                        XmlNodeList settingNodeList = profieNode.SelectNodes("setting");
+
+                        // Iterate over all the settings
+                        foreach (XmlNode settingNode in settingNodeList)
                         {
-                            profileGuid = new Guid(profileNode.InnerText.ToString());
-                        }
-                        else if (profileNode.Name.Equals("settings"))
-                        {
-                            // Iterate over all the settings of the profile
-                            foreach (XmlNode settingNode in profileNode)
+                            // Get the GUID of the setting
+                            if (settingNode["settingGuid"] == null)
+                                continue;
+
+                            Guid settingGuid = new Guid(settingNode["settingGuid"].InnerText);
+                            uint? acMin = null;
+                            uint? acMax = null;
+                            uint? dcMin = null;
+                            uint? dcMax = null;
+
+                            // Min bound in AC mode
+                            if (settingNode["acMinValue"] != null)
                             {
-                                if (settingNode.Name.Equals("setting"))
-                                {
-                                    Guid? settingGuid = null;
-                                    uint? acMin = null;
-                                    uint? acMax = null;
-                                    uint? dcMin = null;
-                                    uint? dcMax = null;
-
-                                    foreach (XmlNode ppmSetting in settingNode)
-                                    {
-                                        if (ppmSetting.Name.Equals("settingGuid"))
-                                        {
-                                            settingGuid = new Guid(ppmSetting.InnerText.ToString());
-                                        }
-                                        else if (ppmSetting.Name.Equals("settingAcDcValues"))
-                                        {
-                                            //Console.Out.WriteLine();
-                                            foreach (XmlNode settingValueRule in ppmSetting)
-                                            {
-                                                if (settingValueRule.Name.Equals("acMinValue"))
-                                                {
-                                                    acMin = Convert.ToUInt32(settingValueRule.InnerText);
-                                                }
-                                                else if (settingValueRule.Name.Equals("dcMinValue"))
-                                                {
-                                                    dcMin = Convert.ToUInt32(settingValueRule.InnerText);
-                                                }
-                                                else if (settingValueRule.Name.Equals("acMaxValue"))
-                                                {
-                                                    acMax = Convert.ToUInt32(settingValueRule.InnerText);
-                                                }
-                                                else if (settingValueRule.Name.Equals("dcMaxValue"))
-                                                {
-                                                    dcMax = Convert.ToUInt32(settingValueRule.InnerText);
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    // A PPM setting is parsed in the XML file 
-                                    // Add it into the list od settings of the profile profileGuid
-                                    if (settingGuid.HasValue)
-                                    {
-                                        listSettings.Add(new Tuple<Guid, uint?, uint?, uint?, uint?>(settingGuid.Value, acMin, acMax, dcMin, dcMax));
-                                    }
-                                }
+                                acMin = Convert.ToUInt32(settingNode["acMinValue"].InnerText);
                             }
 
-                            // All the settings of the profile profileGuid are parsed in the XML file
-                            // Add a validation rule for this profile
-                            if (profileGuid.HasValue)
+                            // Max bound in AC mode
+                            if (settingNode["acMaxValue"] != null)
                             {
-                                ValidationRules.Add(profileGuid.Value, listSettings);
+                                acMax = Convert.ToUInt32(settingNode["acMaxValue"].InnerText);
                             }
+
+                            // Min bound in DC mode
+                            if (settingNode["dcMinValue"] != null)
+                            {
+                                dcMin = Convert.ToUInt32(settingNode["dcMinValue"].InnerText);
+                            }
+
+                            // Max bound in DC mode
+                            if (settingNode["dcMaxValue"] != null)
+                            {
+                                dcMax = Convert.ToUInt32(settingNode["dcMaxValue"].InnerText);
+                            }
+
+                            listSettings.Add(new Tuple<Guid, uint?, uint?, uint?, uint?>(settingGuid, acMin, acMax, dcMin, dcMax));
+
                         }
+
+                        // Add a new rule
+                        ValidationRules.Add(profileGuid, listSettings);
                     }
                 }
             }
