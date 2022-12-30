@@ -214,30 +214,6 @@ namespace PPMCheckerTool
                     throw new Exception("No metadata or kernel-power or usermode-power events");
                 }
 
-                string QoSLevelName = "";
-                // Extract System Metadata, or other static rundown information that may be worth logging
-                // OEM Model cannot be null
-                string oemModel = systemMetadata.Result.Model;
-                string oemName = systemMetadata.Result.Manufacturer;
-
-                string processorModel = "";
-                if (systemMetadata.Result.Processors.Count > 0)
-                {
-                    processorModel = systemMetadata.Result.Processors[0].Name;
-                }
-                uint numCores = systemMetadata.Result.CpuCount;
-
-                // Add metadata to results
-                if(!File.Exists(outputPath))
-                {
-                    Results.Add("PPM Checker Tool");
-                    Results.Add("OEMModel: " + oemModel);
-                    Results.Add("OEMName: " + oemName);
-                    Results.Add("ProcessorModel: " + processorModel);
-                    Results.Add("Num Cores: " + numCores);
-                    Results.Add("===============================================================================");
-                }
-
                 try
                 {
                     // Read from .csv file
@@ -262,6 +238,7 @@ namespace PPMCheckerTool
                     throw new Exception("Failed to read/open file.", ex);
                 }
 
+                string QoSLevelName = "";
                 // Optional : Construct list of relevant generic events
                 List<IGenericEvent> QoSSupportChangedEvents = new List<IGenericEvent>();
                 foreach (var genericEvent in genericEventDataSource.Result.Events)
@@ -361,6 +338,12 @@ namespace PPMCheckerTool
                 }
 
                 //Add  results
+                if (!File.Exists(outputPath))
+                {
+                    Results.Add("PPM Checker Tool");
+                    Results.Add("===============================================================================");
+                }
+
                 Results.Add("Rundown Power Scheme: " + RundownPowerSchemeString);
                 Results.Add("Rundown Effective Power Overlay: " + RundownEffectiveOverlayPowerSchemeString);
 
