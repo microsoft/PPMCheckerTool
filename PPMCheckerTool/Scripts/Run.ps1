@@ -26,27 +26,27 @@ process
     & ".\SetSliderPowerMode.exe"
 
     #####################
-    # RECOMMENDED/BALANCED
+    # BALANCED/RECOMMENDED
     #####################
-    Write-Output "Changing Power mode to Balanced(Recommended) (00000000-0000-0000-0000-000000000000)"
-    & ".\SetSliderPowerMode.exe" 00000000-0000-0000-0000-000000000000
+    Write-Output "Changing Power mode to  Balanced (Non-Surface) / Recommended(Surface)"
+    & ".\SetSliderPowerMode.exe" Default
 
     Write-Output "Taking ETW trace..."
     try
     {
         wpr -start $PSScriptRoot\power.wprp
         Start-Sleep -Seconds 0.5
-        wpr -stop "$PSScriptRoot\power_rec.etl"
+        wpr -stop "$PSScriptRoot\power_default.etl"
     }catch [Exception]{
         Write-Error $_
         exit
     }
 
-    Write-Output "Running PPM Checker for Balanced Power scheme..."
+    Write-Output "Running PPM Checker for Default Power scheme..."
     
     try
     {
-        & ".\PPMCheckerTool.exe" -i $PSScriptRoot\power_rec.etl -o $OutputFilePath
+        & ".\PPMCheckerTool.exe" -i $PSScriptRoot\power_default.etl -o $OutputFilePath
     }catch [Exception]{
         Write-Error $_
         exit;
@@ -143,8 +143,8 @@ process
     #####################
 
     Write-Output "Restoring power mode to Balanced"
-    Write-Output "Changing Power mode to Default(Recommended) (00000000-0000-0000-0000-000000000000)"
-    & ".\SetSliderPowerMode.exe" 00000000-0000-0000-0000-000000000000
+    Write-Output "Changing Power mode to Balanced (Non-Surface) / Recommended(Surface)"
+    & ".\SetSliderPowerMode.exe" Default
 
     try
     {
