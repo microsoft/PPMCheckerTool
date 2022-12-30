@@ -8,47 +8,13 @@
     Version="1.0"
     >
   <Profiles>
-    <SystemCollector
-        Id="SystemCollector"
-        Name="NT Kernel Logger"
-        >
+   
+	<!-- Event Collectors -->
+	<EventCollector Id="EventCollector_Power" Name="Power Collector">
+		<BufferSize Value="1024" />
+		<Buffers Value="2" PercentageOfTotalMemory="true" MaximumBufferSpace="200" />
+	</EventCollector>
 
-      <BufferSize Value="256"/> 
-      <Buffers Value="1" PercentageOfTotalMemory="true" MaximumBufferSpace="32"/>
-    </SystemCollector>
-
-    <EventCollector
-        Id="EventCollector_UserMode"
-        Name="WPR Sample Event Collector"
-        >
-
-      <BufferSize Value="256"/>
-      <Buffers Value="1" PercentageOfTotalMemory="true" MaximumBufferSpace="32"/>
-    </EventCollector>
-    
-    <SystemProvider Id="SystemProvider">
-      <Keywords>
-        <!-- Disk -->
-        <Keyword Value="DiskIO"/>
-        <Keyword Value="HardFaults"/>
-        
-        <!-- CPU -->
-        <Keyword Value="ProcessThread"/>
-        <Keyword Value="Loader"/>
-        <Keyword Value="Power"/>
-        <Keyword Value="CSwitch"/>
-        <Keyword Value="ReadyThread"/>
-        <Keyword Value="SampledProfile"/>
-        <Keyword Value="DPC"/>
-        <Keyword Value="Interrupt"/>
-        <Keyword Value="IdleStates"/>
-
-        <!-- Memory -->
-        <Keyword Value="Memory"/>
-        <Keyword Value="MemoryInfo"/>
-      </Keywords>
-    </SystemProvider>
-	
     <!-- Power -->
     <EventProvider
         Id="EventProvider_Microsoft-Windows-Kernel-Power"
@@ -77,36 +43,7 @@
         <Keyword Value="0xFFFFFFFF"/>
       </CaptureStateOnSave>
     </EventProvider>
-   
-    <EventProvider
-      Id="EventProvider_Microsoft-Windows-Kernel-Pep"
-      Name="Microsoft-Windows-Kernel-Pep"
-      NonPagedMemory="true"
-      Level="6"
-        >
-      <Keywords>
-        <Keyword Value="0xFFFFFFFF"/>
-      </Keywords>
-      <CaptureStateOnSave>
-        <Keyword Value="0xFFFFFFFF"/>
-      </CaptureStateOnSave>
-    </EventProvider>
 
-    <EventProvider Id="EventProvider_Microsoft-Windows-PDC" Name="Microsoft-Windows-PDC">
-      <Keywords>
-        <Keyword Value="0xFFFFFFFF"/>
-      </Keywords>
-      <CaptureStateOnSave>
-        <Keyword Value="0xFFFFFFFF"/>
-      </CaptureStateOnSave>
-    </EventProvider>
-   
-    <EventProvider Id="EventProvider_PerfTrack" Name="PerfTrack" Level="4" />
-    <EventProvider Id="EventProvider_E3" Name="Microsoft-Windows-Energy-Estimation-Engine" Level="4" />
-
-    <EventProvider Id="EventProvider_Powersnap" Name="7073707A-0587-4E03-B31F-6443EB1ACBCD" />
-     
-	
 	<EventProvider Id="Microsoft-Windows-UserModePowerService_CaptureState" Name="Microsoft-Windows-UserModePowerService" NonPagedMemory="true">
       <CaptureStateOnSave>
         <Keyword Value="0x0"/>
@@ -126,23 +63,13 @@
         <ProblemCategory Value="First Level Triage"/>
       </ProblemCategories>
       <Collectors>
-        
-        <SystemCollectorId Value="SystemCollector">
-          <SystemProviderId Value="SystemProvider"/>
-        </SystemCollectorId>
-        
-        <EventCollectorId Value="EventCollector_UserMode">
+        <EventCollectorId Value="EventCollector_Power">
           <EventProviders>
             <!-- Power -->
             <EventProviderId Value="EventProvider_Microsoft-Windows-Kernel-Power"/>
 			<EventProviderId Value="EventProvider_Microsoft.Windows.Kernel.Power"/>
 			<EventProviderId Value="Microsoft-Windows-UserModePowerService_CaptureState"/>			
-            <EventProviderId Value="EventProvider_Microsoft-Windows-Kernel-Processor-Power"/>
-            <EventProviderId Value="EventProvider_Microsoft-Windows-PDC"/>
-			<EventProviderId Value="EventProvider_Powersnap"/>
-			<EventProviderId Value="EventProvider_E3"/>
-            <EventProviderId Value="EventProvider_PerfTrack"/>
-			
+            <EventProviderId Value="EventProvider_Microsoft-Windows-Kernel-Processor-Power"/>			
           </EventProviders>
         </EventCollectorId>        
       </Collectors>

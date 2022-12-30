@@ -7,11 +7,14 @@ Param(
     [string] $OutputFilePath
 )
 
+# 'ExeLocation' is the folder in which the release for both the PPMCheckerTool project and SetSliderPowerMode project resides. Can be a relative path. e.g. D:\PPMCheckerRelease
+# To publish both projects to the same folder, right click the project in Visual studio -> Publish -> to Folder. Default publish settings works.
+# Otherwise, use the release from the Github page and unzip it. It is the same output as the 'Publish'
+# 'OutputFilePath' is the full location and name of the file. e.g. D:\Tools\output.txt. Can be a relative path.
+
 process
 {
-
-
-    Write-Output "Running script..."
+    Write-Output "Running script...`n"
 
     try
     {
@@ -28,7 +31,7 @@ process
     #####################
     # BALANCED/RECOMMENDED
     #####################
-    Write-Output "Changing Power mode to  Balanced (Non-Surface) / Recommended(Surface)"
+    Write-Output "`nChanging Power mode to  Balanced (Non-Surface) / Recommended(Surface)"
     & ".\SetSliderPowerMode.exe" Default
 
     Write-Output "Taking ETW trace..."
@@ -57,7 +60,7 @@ process
     #####################
     # BETTER BATTERY
     #####################
-    Write-Output "Changing Power mode to Better Battery"
+    Write-Output "`nChanging Power mode to Better Battery"
     & ".\SetSliderPowerMode.exe" BetterBattery
 
     Write-Output "Taking ETW trace..."
@@ -85,7 +88,7 @@ process
     #####################
     # BETTER PERFORMANCE
     #####################
-    Write-Output "Changing Power mode to Better Performance"
+    Write-Output "`nChanging Power mode to Better Performance"
     & ".\SetSliderPowerMode.exe" BetterPerformance
 
     Write-Output "Taking ETW trace..."
@@ -114,7 +117,7 @@ process
     #####################
     # BEST PERFORMANCE
     #####################
-    Write-Output "Changing Power mode to Best Performance"
+    Write-Output "`nChanging Power mode to Best Performance"
     & ".\SetSliderPowerMode.exe" BestPerformance
 
     Write-Output "Taking ETW trace..."
@@ -142,7 +145,7 @@ process
 
     #####################
 
-    Write-Output "Restoring power mode to Balanced"
+    Write-Output "`nRestoring power mode to Balanced"
     Write-Output "Changing Power mode to Balanced (Non-Surface) / Recommended(Surface)"
     & ".\SetSliderPowerMode.exe" Default
 
