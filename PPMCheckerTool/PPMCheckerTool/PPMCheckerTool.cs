@@ -24,7 +24,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Windows.EventTracing;
 using Microsoft.Windows.EventTracing.Events;
@@ -135,13 +134,6 @@ namespace PPMCheckerTool
 
                 var inputFile = GetRequiredArgument(args, "-i");
                 var outputFile = GetRequiredArgument(args, "-o");
-                bool noHeader = GetSwitch(args, "-noHeader");
-
-                var startTime = GetArgument(args, "-start");
-                Timestamp start = (startTime != null) ? Timestamp.FromSeconds(decimal.Parse(startTime)) : Timestamp.Zero;
-
-                var stopTime = GetArgument(args, "-stop");
-                Timestamp stop = (stopTime != null) ? Timestamp.FromSeconds(decimal.Parse(stopTime)) : Timestamp.MaxValue;
 
                 // Handle invalid arguments
                 if (inputFile != null && !File.Exists(inputFile))
@@ -151,7 +143,7 @@ namespace PPMCheckerTool
                 }
 
                 // Process the input ETL trace
-                AnalyzeTrace(inputFile, outputFile, start, stop, noHeader);
+                AnalyzeTrace(inputFile, outputFile);
 
             }
             catch (ArgumentException e)
@@ -173,10 +165,7 @@ namespace PPMCheckerTool
         /// </summary>
         /// <param name="tracePath"></param>
         /// <param name="outputPath"></param>
-        /// <param name="startTime"></param>
-        /// <param name="stopTime"></param>
-        /// <param name="noHeader"></param>
-        static void AnalyzeTrace(string tracePath, string outputPath, Timestamp startTime, Timestamp stopTime, bool noHeader)
+        static void AnalyzeTrace(string tracePath, string outputPath)
         {
             using (ITraceProcessor trace = TraceProcessor.Create(tracePath, true, true))
             {
@@ -219,10 +208,15 @@ namespace PPMCheckerTool
                 uint numCores = systemMetadata.Result.CpuCount;
 
                 // Add metadata to results
-                results.Add("OEMModel: " + oemModel);
-                results.Add("OEMName: " + oemName);
-                results.Add("ProcessorModel: " + processorModel);
-                results.Add("Num Cores: " + numCores);
+                if(!File.Exists(outputPath))
+                {
+                    results.Add("PPM Checker Tool");
+                    results.Add("OEMModel: " + oemModel);
+                    results.Add("OEMName: " + oemName);
+                    results.Add("ProcessorModel: " + processorModel);
+                    results.Add("Num Cores: " + numCores);
+                    results.Add("===============================================================================");
+                }
 
                 // Maps PPM Setting --> Profile --> (AC value , DC value)
                 Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>> powSettings = new Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>>();
@@ -365,7 +359,7 @@ namespace PPMCheckerTool
                 // Validate PPM settings
                 ValidatePPMSettings(powSettings, profileNames, GuidToFriendlyName, results);
 
-                WriteOutput(results, outputPath, true); // Always No header for now
+                WriteOutput(results, outputPath);
             }
         }
 
@@ -773,14 +767,14 @@ namespace PPMCheckerTool
         /// </summary>
         /// <param name="results"></param>
         /// <param name="outputFile"></param>
-        /// <param name="noHeader"></param>
-        public static void WriteOutput(List<String> results, String outputPath, bool noHeader)
+        public static void WriteOutput(List<String> results, String outputPath)
         {
             StringBuilder output = new StringBuilder();
-            if (!noHeader)
+
+            if(File.Exists(outputPath)) 
             {
-                output.Append(getHeader());
-                output.AppendLine();
+                output.AppendLine("===============================================================================");
+                output.AppendLine(); 
             }
 
             foreach (String result in results)
@@ -788,8 +782,10 @@ namespace PPMCheckerTool
                 output.Append(result);
                 output.AppendLine();
             }
+            output.AppendLine("===============================================================================");
+            output.AppendLine();
 
-            File.WriteAllText(outputPath, output.ToString());
+            File.AppendAllText(outputPath, output.ToString());
         }
     }
 }
