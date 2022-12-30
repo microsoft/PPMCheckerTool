@@ -1,14 +1,38 @@
-# Project
+# PPM Checker Tool
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
+Processor Power Management (PPM) settings can significantly impact power and performance of Windows systems. These settings configure getting the right threads on the right cores at the right time and frequency that balance performance and power requirements. 
+Configuring the PPM settings is a complex process and requires area expertise and understanding of each setting’s impact on the system’s behavior. There are many settings with many dimensions (Power Scheme, Power Source, Processor Class, Quality of Service etc.) which create numerous numbers of configurations and add to the complexity of the PPM configuration task.
 
-As the maintainer of this project, please make a few updates:
+To help this process, we built a tool that the silicon vendors/OEMs can deploy to validate the PPM settings on their new products.
 
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
+> The process
+> ![image](https://user-images.githubusercontent.com/121056171/210118095-0926239e-2e7f-4dbf-8015-0dfcc630b92b.png)
+
+> The Architecture
+> ![image](https://user-images.githubusercontent.com/121056171/210118102-93b0a087-0562-4b1d-baa3-0ef5aae138ce.png)
+
+
+## How to use the Automatic Script
+The script is located in the Github release, as well as in the Scripts folder in the PPMCheckerTool.
+### To Run the script with the release
+Download the release from Github. Unzip it. Run the script Run.ps1 from the Scripts folder.
+
+‘ExeLocation’ refers to the location that both the project Exe’s reside – PPMCheckerTool.exe and SetSliderPowerMode.exe. In this case, it is 1 directory up. Enter ‘..’ in the prompt. Can be relative path.
+
+‘OutputFilePath’ refers to the full name and path of the output file. Eg. D:\Outputs\Output.txt will work. Can be relative path.
+
+### To Run the script with the visual studio development environment
+
+Open the solution in Visual Studio, ensure you have no build errors. For this method to work, similar to the above method, you need to ensure that both the projects .exe is in the same folder. Or, you can modify the Run.ps1 script to take hardcoded absolute paths.
+
+Right click on both the projects – PPMCheckerTool and SetSliderPowerMode -> Publish -> Local Folder -> Enter same local folder location.
+
+Run the script Run.ps1
+
+‘ExeLocation’ – Enter the local folder
+
+‘OutputFilePath’ – Enter full name and path of the output file. Eg. D:\Outputs\Output.txt will work. Can be relative path.
+
 
 ## Contributing
 
