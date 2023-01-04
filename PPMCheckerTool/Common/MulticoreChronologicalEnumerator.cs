@@ -1,18 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Text;
 using Microsoft.Windows.EventTracing;
-using Microsoft.Windows.EventTracing.Tables;
-using Microsoft.Windows.EventTracing.Metadata;
-using Microsoft.Windows.EventTracing.Cpu;
-using Microsoft.Windows.EventTracing.Power;
-using Microsoft.Windows.EventTracing.WaitAnalysis;
-using Microsoft.Windows.EventTracing.Utc;
-using Microsoft.Windows.EventTracing.Symbols;
 using System.Collections;
-using System.Threading.Tasks;
 
 namespace Common
 {
