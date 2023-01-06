@@ -28,13 +28,7 @@
 		<LangVersion>8.0</LangVersion>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Windows.Performance.AddIn.E3" Version="10.0.18829" />
-		<PackageReference Include="Microsoft.Windows.Performance.AddIn.Frames" Version="10.0.18829" />
-		<PackageReference Include="Microsoft.Windows.Performance.AddIn.NT.x64" Version="10.0.18229" />
-		<PackageReference Include="Microsoft.Windows.Performance.AddIn.PPM.x64" Version="10.0.18829" />
-		<PackageReference Include="Microsoft.Windows.Performance.AddIn.UTC" Version="10.0.18829" />
-		<PackageReference Include="Microsoft.Windows.Performance.Core.x64" Version="10.0.18829" />
-		<PackageReference Include="Microsoft.Windows.Performance.Data" Version="0.22.0" />
+		<PackageReference Include="Microsoft.Windows.EventTracing.Processing.All" Version="1.11.109" />
 		<PackageReference Include="System.Xml.XmlDocument" Version="4.3.0" />
 	</ItemGroup>
 	<ItemGroup>
@@ -51,11 +45,13 @@
 		
 	<ItemGroup>
 		<Reference Include="System.Core" />
-	</ItemGroup>
-	<!-- Workaround NuGet Issue #4856. -->
+	</ItemGroup>	
 	<ItemGroup>
 		<None Update="@(None)">
 			<Visible Condition="'%(NuGetItemType)' == 'None'">false</Visible>
 		</None>
 	</ItemGroup>
+	<Target Name="CopyYourFolderAfterPublish" AfterTargets="Publish">
+		<Exec Command="XCOPY $(ProjectDir)..\Scripts\*.* $(PublishDir)Scripts\ /S /Y" />
+	</Target>
 </Project>

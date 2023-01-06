@@ -196,11 +196,11 @@ namespace PPMCheckerTool
         /// <param name="outputPath"> Output results file </param>
         static void AnalyzeTrace(string tracePath, string outputPath)
         {
-            using (ITraceProcessor trace = TraceProcessor.Create(tracePath, true, true))
+            using (ITraceProcessor trace = TraceProcessor.Create(tracePath))
             {
                 // Enable DataSources
-                IPendingResult<ISystemMetadata> systemMetadata = trace.Enable(TraceDataSource.SystemMetadata);
-                IPendingResult<IGenericEventDataSource> genericEventDataSource = trace.Enable(TraceDataSource.GenericEvents);
+                IPendingResult<ISystemMetadata> systemMetadata = trace.UseSystemMetadata();
+                IPendingResult<IGenericEventDataSource> genericEventDataSource = trace.UseGenericEvents();
                 
                 // Process Data Sources
                 trace.Process();
@@ -211,7 +211,7 @@ namespace PPMCheckerTool
                    (!genericEventDataSource.Result.Events.Any(x => x.ProviderId.Equals(GUIDS.Microsoft_Windows_Kernel_Processor_Power))) ||
                    (!genericEventDataSource.Result.Events.Any(x => x.ProviderId.Equals(GUIDS.Microsoft_Windows_UserModePowerService))))
                 {
-                    throw new Exception("No metadata or kernel-power or usermode-power events");
+                    throw new Exception("No metadata or kernel-processor-power or usermode-power events");
                 }
 
                 try
@@ -239,6 +239,15 @@ namespace PPMCheckerTool
                 }
 
                 string QoSLevelName = "";
+
+                // Extract metadata information
+                string oemModel = systemMetadata.Result.Model;
+                string oemName = systemMetadata.Result.Manufacturer;
+                int buildNumber = systemMetadata.Result.OSVersion.Build;
+
+                // If more than 1 type of core, then it is a hybrid system
+                bool isHybridSystem = systemMetadata.Result.Processors.GroupBy(x => x.EfficiencyClass).Distinct().Count() > 1 ? true : false;
+
                 // Optional : Construct list of relevant generic events
                 List<IGenericEvent> QoSSupportChangedEvents = new List<IGenericEvent>();
                 foreach (var genericEvent in genericEventDataSource.Result.Events)
@@ -337,10 +346,14 @@ namespace PPMCheckerTool
                     }
                 }
 
-                //Add  results
+                //Add results
                 if (!File.Exists(outputPath))
                 {
                     Results.Add("PPM Checker Tool");
+                    Results.Add("OEMModel: " + oemModel);
+                    Results.Add("OEMName: " + oemName);
+                    Results.Add("Build Number: " + buildNumber);
+                    Results.Add("IsHybridSystem: " + isHybridSystem);
                     Results.Add("===============================================================================");
                 }
 

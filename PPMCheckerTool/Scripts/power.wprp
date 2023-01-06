@@ -8,13 +8,26 @@
     Version="1.0"
     >
   <Profiles>
-   
+   <SystemCollector
+        Id="SystemCollector"
+        Name="NT Kernel Logger"
+        >
+      <!-- 1MB * 100 buffers = 100 MB -->
+      <BufferSize Value="1024"/> 
+      <Buffers Value="1" PercentageOfTotalMemory="true" MaximumBufferSpace="32"/>
+    </SystemCollector>
 	<!-- Event Collectors -->
 	<EventCollector Id="EventCollector_Power" Name="Power Collector">
 		<BufferSize Value="1024" />
 		<Buffers Value="2" PercentageOfTotalMemory="true" MaximumBufferSpace="200" />
 	</EventCollector>
 
+	<SystemProvider Id="SystemProvider">
+		<Keywords>  
+			<Keyword Value="Power"/>
+		</Keywords>
+    </SystemProvider>
+	
     <!-- Power -->
     <EventProvider
         Id="EventProvider_Microsoft-Windows-Kernel-Power"
@@ -32,14 +45,15 @@
 
     <EventProvider
        Id="EventProvider_Microsoft-Windows-Kernel-Processor-Power"
-       Name="Microsoft-Windows-Kernel-Processor-Power"
+       Name="0f67e49f-fe51-4e9f-b490-6f2948cc6027"
        NonPagedMemory="true"
        Level="6"
+	   EventKey="true"
         >
-      <Keywords>
+	<Keywords>
         <Keyword Value="0xFFFFFFFF"/>
       </Keywords>
-      <CaptureStateOnSave>
+      <CaptureStateOnSave Timeout="0">
         <Keyword Value="0xFFFFFFFF"/>
       </CaptureStateOnSave>
     </EventProvider>
@@ -63,11 +77,13 @@
         <ProblemCategory Value="First Level Triage"/>
       </ProblemCategories>
       <Collectors>
+	    <SystemCollectorId Value="SystemCollector">
+          <SystemProviderId Value="SystemProvider"/>
+        </SystemCollectorId>
         <EventCollectorId Value="EventCollector_Power">
           <EventProviders>
             <!-- Power -->
-            <EventProviderId Value="EventProvider_Microsoft-Windows-Kernel-Power"/>
-			<EventProviderId Value="EventProvider_Microsoft.Windows.Kernel.Power"/>
+			<EventProviderId Value="EventProvider_Microsoft-Windows-Kernel-Power"/>
 			<EventProviderId Value="Microsoft-Windows-UserModePowerService_CaptureState"/>			
             <EventProviderId Value="EventProvider_Microsoft-Windows-Kernel-Processor-Power"/>			
           </EventProviders>
