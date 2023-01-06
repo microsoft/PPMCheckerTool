@@ -51,4 +51,7 @@
 			<Visible Condition="'%(NuGetItemType)' == 'None'">false</Visible>
 		</None>
 	</ItemGroup>
+	<Target Name="CopyYourFolderAfterPublish" AfterTargets="Publish">
+		<Exec Command="XCOPY $(ProjectDir)..\Scripts\*.* $(PublishDir)Scripts\ /S /Y" />
+	</Target>
 </Project>
