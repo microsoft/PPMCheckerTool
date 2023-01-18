@@ -17,11 +17,6 @@
 				<dcMaxValue> 79 </dcMaxValue>
 			</setting>
 
-			<!--Frequency Cap-->
-			<setting>
-				<settingGuid> 75b0ae3f-bce0-45a7-8c89-c9611c25e100 </settingGuid>
-			</setting>
-
 		</profile>
 
 		<!--LowQoS profile-->
@@ -31,11 +26,17 @@
 			<!--EPP-->
 			<setting>
 				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6863 </settingGuid>
+				<dcMinDistanceToProfile>
+					<profile> 00000000-0000-0000-0000-000000000000 </profile>
+					<distance> 5 </distance>
+				</dcMinDistanceToProfile>
+
+			
 			</setting>
 			<!--Frequency Cap-->
 			<setting>
 				<settingGuid> 75b0ae3f-bce0-45a7-8c89-c9611c25e100 </settingGuid>
-				<dcValue> 1500 </dcValue>
+				<dcMaxValue> 1500 </dcMaxValue>
 			</setting>
 
 		</profile>
@@ -47,11 +48,23 @@
 			<!--EPP-->
 			<setting>
 				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6863 </settingGuid>
+				
+				<dcMinDistanceToProfile>
+					<profile> c04a802d-2205-4910-ae98-3b51e3bb72f2 </profile>
+					<distance> 0 </distance>
+				</dcMinDistanceToProfile>
+				
 			</setting>
 			
 			<!--Frequency Cap-->
 			<setting>
 				<settingGuid> 75b0ae3f-bce0-45a7-8c89-c9611c25e100 </settingGuid>
+
+				<dcMaxDistanceToProfile>
+					<profile> c04a802d-2205-4910-ae98-3b51e3bb72f2 </profile>
+					<distance> 0 </distance>
+				</dcMaxDistanceToProfile>
+				
 			</setting>
 			
 		</profile>
@@ -63,12 +76,22 @@
 			<!--EPP-->
 			<setting>
 				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6863 </settingGuid>
+				<dcMinDistanceToProfile>
+					<profile> 336c7511-f109-4172-bb3a-3ea51f815ada </profile>
+					<distance> 0 </distance>
+				</dcMinDistanceToProfile>
 			</setting>
 
 			<!--Frequency Cap-->
 			<setting>
 				<settingGuid> 75b0ae3f-bce0-45a7-8c89-c9611c25e100 </settingGuid>
 			</setting>
+
+			<dcMaxDistanceToProfile>
+				<profile> 336c7511-f109-4172-bb3a-3ea51f815ada </profile>
+				<distance> 0 </distance>
+			</dcMaxDistanceToProfile>
+			
 		</profile>
 
 		<!--Standby profile-->
@@ -78,11 +101,21 @@
 			<!--EPP-->
 			<setting>
 				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6863 </settingGuid>
+
+				<dcMinDistanceToProfile>
+					<profile> 00000000-0000-0000-0000-000000000000 </profile>
+					<distance> 0 </distance>
+				</dcMinDistanceToProfile>
 			</setting>
 
 			<!--Frequency Cap-->
 			<setting>
 				<settingGuid> 75b0ae3f-bce0-45a7-8c89-c9611c25e100 </settingGuid>
+				<dcMaxDistanceToProfile>
+					<profile> 00000000-0000-0000-0000-000000000000 </profile>
+					<distance> 0 </distance>
+				</dcMaxDistanceToProfile>
+				
 			</setting>
 		</profile>
 
@@ -93,11 +126,23 @@
 			<!--EPP-->
 			<setting>
 				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6863 </settingGuid>
+
+				<dcMinDistanceToProfile>
+					<profile> 00000000-0000-0000-0000-000000000000 </profile>
+					<distance> 0 </distance>
+				</dcMinDistanceToProfile>
+				
 			</setting>
 
 			<!--Frequency Cap-->
 			<setting>
 				<settingGuid> 75b0ae3f-bce0-45a7-8c89-c9611c25e100 </settingGuid>
+
+				<dcMaxDistanceToProfile>
+					<profile> 00000000-0000-0000-0000-000000000000 </profile>
+					<distance> 0 </distance>
+				</dcMaxDistanceToProfile>
+				
 			</setting>
 		</profile>
 
