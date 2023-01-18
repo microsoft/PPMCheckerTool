@@ -654,23 +654,16 @@ namespace PPMCheckerTool
                             // Get the distance value
                             int distance = rules.acMinDistanceToProfile.Item2;
 
-                            // Get the value of the setting for the reference profile
-                            var refProfile_id = ProfileNames.FirstOrDefault(x => x.Value.Item3 == refProfileGuid).Key;
-                            if (!PowSettings[settingGuid].ContainsKey(refProfile_id) 
-                                || !PowSettings[settingGuid][refProfile_id].Item1.HasValue)
-                            {
-                                // Ref profile doesn’t  have a value for the setting
-                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to profile {refProfileName} should be > {distance}. PPM setting is not set for the profile {refProfileName}");
-                            }
-                            else
-                            {
-                                uint refProfileSettingValue = PowSettings[settingGuid][refProfile_id].Item1.Value;
-                                int delta =  (int)acValue.Value - (int)refProfileSettingValue ;
+                            // Calculate the distance to reference profile
+                            int distanceToRefProfile = CalculateDistanceToProfile(settingGuid, acValue.Value, refProfileGuid, true);
 
-                                if (delta < distance)
-                                {
-                                    Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to profile {refProfileName} should be >= {distance} ({settingName} = {refProfileSettingValue} for {refProfileName})");
-                                }
+                            if (distanceToRefProfile == Int32.MinValue)
+                            {
+                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to profile {refProfileName} should be >= {distance}. PPM setting is not set for the profile {refProfileName}");
+                            }
+                            else if (distanceToRefProfile < distance)
+                            {
+                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to profile {refProfileName} should be >= {distance}. Actual distance = {distanceToRefProfile}");
                             }
                         }
 
@@ -685,23 +678,16 @@ namespace PPMCheckerTool
                             // Get the distance 
                             int distance = rules.acMaxDistanceToProfile.Item2;
 
-                            // Get the value of the setting for the reference profile
-                            var refProfile_id = ProfileNames.FirstOrDefault(x => x.Value.Item3 == refProfileGuid).Key;
-                            if (!PowSettings[settingGuid].ContainsKey(refProfile_id)
-                                || !PowSettings[settingGuid][refProfile_id].Item1.HasValue)
+                            // Calculate the distance to reference profile
+                            int distanceToRefProfile = CalculateDistanceToProfile(settingGuid, acValue.Value, refProfileGuid, true);
+
+                            if (distanceToRefProfile == Int32.MinValue)
                             {
-                                // Ref profile doesn’t  have a value for the setting
                                 Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to profile {refProfileName} should be <= {distance}. PPM setting is not set for the profile {refProfileName}");
                             }
-                            else
+                            else if (distanceToRefProfile > distance)
                             {
-                                uint refProfileSettingValue = PowSettings[settingGuid][refProfile_id].Item1.Value;
-                                int delta = (int)acValue.Value - (int)refProfileSettingValue ;
-
-                                if (delta > distance)
-                                {
-                                    Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to profile {refProfileName} should be <= {distance} ({settingName} = {refProfileSettingValue} for {refProfileName})");
-                                }
+                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to profile {refProfileName} should be <= {distance}. Actual distance = {distanceToRefProfile}");
                             }
                         }
                     }
@@ -754,23 +740,16 @@ namespace PPMCheckerTool
                             // Get the distance 
                             int distance = rules.dcMinDistanceToProfile.Item2;
 
-                            // Get the value of the setting for the reference profile
-                            var refProfile_id = ProfileNames.FirstOrDefault(x => x.Value.Item3 == refProfileGuid).Key;
-                            if (!PowSettings[settingGuid].ContainsKey(refProfile_id)
-                                || !PowSettings[settingGuid][refProfile_id].Item2.HasValue)
+                            // Calculate the distance to reference profile
+                            int distanceToRefProfile = CalculateDistanceToProfile(settingGuid, dcValue.Value, refProfileGuid, false);
+
+                            if (distanceToRefProfile == Int32.MinValue)
                             {
-                                // Ref profile doesn’t  have a value for the setting
                                 Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to profile {refProfileName} should be >= {distance}. PPM setting is not set for the profile {refProfileName}");
                             }
-                            else
+                            else if (distanceToRefProfile < distance)
                             {
-                                uint refProfileSettingValue = PowSettings[settingGuid][refProfile_id].Item2.Value;
-                                int delta = (int)dcValue.Value - (int)refProfileSettingValue;
-
-                                if (delta < distance)
-                                {
-                                    Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to profile {refProfileName} should be >= {distance} ({settingName} = {refProfileSettingValue} for {refProfileName})");
-                                }
+                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to profile {refProfileName} should be >= {distance}. Actual distance = {distanceToRefProfile}");
                             }
                         }
 
@@ -785,23 +764,16 @@ namespace PPMCheckerTool
                             // Get the distance value
                             int distance = rules.dcMaxDistanceToProfile.Item2;
 
-                            // Get the value of the setting for the reference profile
-                            var refProfile_id = ProfileNames.FirstOrDefault(x => x.Value.Item3 == refProfileGuid).Key;
-                            if (!PowSettings[settingGuid].ContainsKey(refProfile_id)
-                                || !PowSettings[settingGuid][refProfile_id].Item2.HasValue)
-                            {
-                                // Ref profile doesn’t  have a value for the setting
-                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to profile {refProfileName} should be <= {distance}. PPM setting is not set for the profile {refProfileName}");
-                            }
-                            else
-                            {
-                                uint refProfileSettingValue = PowSettings[settingGuid][refProfile_id].Item2.Value;
-                                int delta = (int)dcValue.Value - (int)refProfileSettingValue;
+                            // Calculate the distance to reference profile
+                            int distanceToRefProfile = CalculateDistanceToProfile(settingGuid, dcValue.Value, refProfileGuid, false);
 
-                                if (delta > distance)
-                                {
-                                    Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to profile  {refProfileName} should be <= {distance} ({settingName} = {refProfileSettingValue} for {refProfileName})");
-                                }
+                            if (distanceToRefProfile == Int32.MinValue)
+                            {
+                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to profile {refProfileName} should be >= {distance}. PPM setting is not set for the profile {refProfileName}");
+                            }
+                            else if (distanceToRefProfile > distance)
+                            {
+                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to profile {refProfileName} should be <= {distance}. Actual distance = {distanceToRefProfile}");
                             }
                         }
                     }
@@ -866,6 +838,65 @@ namespace PPMCheckerTool
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// For a given setting, calculate the distance between two different profiles 
+        /// E.g., EPP = 50 for default profile and = 70 for LowQoS profile --> distance between the two profiles = 20 in this case.
+        /// </summary>
+        /// <param name="settingGuid"> Guid of the setting </param>
+        /// <param name="settingValue"> value of the setting </param>
+        /// <param name="refProfileGuid"> GUID of the profile to compare with </param>
+        /// <param name="isAC"> AC/DC mode </param>
+        /// <returns> the distance between the two profiles. If the setting is not set for the refProfileGuid then return Int32.MinValue </returns>
+        public static int CalculateDistanceToProfile(Guid settingGuid, uint settingValue, Guid refProfileGuid, bool isAC)
+        {
+            // Get the setting value of the reference profile
+            uint? refProfileSettingValue = null;
+            var refProfile_id = ProfileNames.FirstOrDefault(x => x.Value.Item3 == refProfileGuid).Key;
+
+            if(isAC)
+            {
+                // AC mode
+                if (PowSettings[settingGuid].ContainsKey(refProfile_id) && PowSettings[settingGuid][refProfile_id].Item1.HasValue)
+                {
+                    // The setting was set for the Ref profile
+                    refProfileSettingValue = PowSettings[settingGuid][refProfile_id].Item1.Value;
+                }
+                else
+                {
+                    // The setting was not set for the Ref profile 
+                    // Check if Ref profile inherits the settings from its parent profiles
+                    Guid? refProfileParentGuid = null;
+                    FindSettingInParentProfiles(true, refProfileGuid, settingGuid, ref refProfileParentGuid, ref refProfileSettingValue);
+                }
+            }
+            else
+            {
+                // DC mode
+                if (PowSettings[settingGuid].ContainsKey(refProfile_id) && PowSettings[settingGuid][refProfile_id].Item2.HasValue)
+                {
+                    // The setting was set for the Ref profile
+                    refProfileSettingValue = PowSettings[settingGuid][refProfile_id].Item2.Value;
+                }
+                else
+                {
+                    // The setting was not set for the Ref profile 
+                    // Check if Ref profile inherits the settings from its parent profiles
+                    Guid? refProfileParentGuid = null;
+                    FindSettingInParentProfiles(false, refProfileGuid, settingGuid, ref refProfileParentGuid, ref refProfileSettingValue);
+                }
+            }
+
+            // Check if the setting has a value in the reference profile 
+            if (!refProfileSettingValue.HasValue)
+            {
+                return Int32.MinValue;
+            }
+
+            // Calculate the distance to Ref profile 
+            int distanceToRefProfile = (int)settingValue - (int)refProfileSettingValue;
+            return distanceToRefProfile;
         }
 
         /// <summary>
