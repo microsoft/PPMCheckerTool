@@ -219,8 +219,8 @@ namespace PPMCheckerTool
                 // Validate that the necessary data sources are present in order to continue analysis
                 if (!systemMetadata.HasResult ||
                    (!genericEventDataSource.HasResult || genericEventDataSource.Result.Events.Count == 0) ||
-                   (!genericEventDataSource.Result.Events.Any(x => x.ProviderId.Equals(GUIDS.Microsoft_Windows_Kernel_Processor_Power))))
-                   //|| (!genericEventDataSource.Result.Events.Any(x => x.ProviderId.Equals(GUIDS.Microsoft_Windows_UserModePowerService))))
+                   (!genericEventDataSource.Result.Events.Any(x => x.ProviderId.Equals(GUIDS.Microsoft_Windows_Kernel_Processor_Power))) ||
+                   (!genericEventDataSource.Result.Events.Any(x => x.ProviderId.Equals(GUIDS.Microsoft_Windows_UserModePowerService))))
                 {
                     throw new Exception("No metadata or kernel-processor-power or usermode-power events");
                 }
@@ -281,7 +281,7 @@ namespace PPMCheckerTool
                 string oemModel = systemMetadata.Result.Model;
                 string oemName = systemMetadata.Result.Manufacturer;
                 int buildNumber = systemMetadata.Result.OSVersion.Build;
-                int buildRevision = systemMetadata.Result.OSVersion.Revision;
+                int buildRevision = systemMetadata.Result.OSVersion.Revision; 
                 string processorModel = "";
                 bool? isHybridSystem = null;
                 if (systemMetadata.Result.Processors.Count > 0)
