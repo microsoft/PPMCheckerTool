@@ -24,7 +24,8 @@
 
 	<SystemProvider Id="SystemProvider">
 		<Keywords>  
-			<Keyword Value="Power"/>
+			<Keyword Value="CpuConfig"/>
+			<Keyword Value="Loader"/>
 		</Keywords>
     </SystemProvider>
 	
