@@ -38,6 +38,9 @@
 		<EmbeddedResource Include="GuidToFriendlyName.csv">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</EmbeddedResource>
+		<EmbeddedResource Include="FriendlyNameToGuid.csv">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</EmbeddedResource>
 		<EmbeddedResource Include="PPMSettingRules.xml">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</EmbeddedResource>
