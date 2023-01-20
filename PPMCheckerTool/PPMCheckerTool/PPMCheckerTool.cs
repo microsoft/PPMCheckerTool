@@ -572,7 +572,7 @@ namespace PPMCheckerTool
                     // Validate that the setting is set for any profile 
                     if (!PowSettings.ContainsKey(settingGuid))
                     {
-                        Results.Add($"ERROR , {profileName} , {settingName} , AC/DC , , Setting is not set in the profile and in any profile of the PPKG.");
+                        Results.Add($"ERROR , {profileName} , {settingName} , AC/DC , NULL , Setting is not set in the profile and in any profile of the PPKG.");
                         continue;
                     }
 
@@ -610,7 +610,7 @@ namespace PPMCheckerTool
                     if (!acValue.HasValue)
                     {
                         // The setting doesn’t have a value
-                        Results.Add($"ERROR , {profileName} , {settingName} , AC , , Setting is not set in the profile.");
+                        Results.Add($"ERROR , {profileName} , {settingName} , AC , NULL , Setting is not set in the profile.");
                     }
                     else
                     {
@@ -696,7 +696,7 @@ namespace PPMCheckerTool
                     if (!dcValue.HasValue)
                     {
                         // The setting doesn’t have a value
-                        Results.Add($"ERROR , {profileName} , {settingName} , DC , , Setting is not set in the profile.");
+                        Results.Add($"ERROR , {profileName} , {settingName} , DC , NULL , Setting is not set in the profile.");
                     }
                     else
                     {
