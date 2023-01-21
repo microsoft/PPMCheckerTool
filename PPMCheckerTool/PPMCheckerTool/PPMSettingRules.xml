@@ -2,15 +2,15 @@
 	
 	<!--Default overlay power scheme-->
 	<overlay>
-		<overlayGuid> 00000000-0000-0000-0000-000000000000 </overlayGuid>
+		<name> Overlay_Default </name>
 		
 		<!--Default profile-->
 		<profile>
-			<profileGuid> 00000000-0000-0000-0000-000000000000 </profileGuid>
+			<name> Profile_Default </name>
 			
 			<!--Setting EPP class0-->
 			<setting>
-				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6863 </settingGuid>
+				<name> PERFEPP </name>
 				
 				<!--Min AC value-->
 				<acMinValue> 33 </acMinValue>
@@ -22,7 +22,7 @@
 
 			<!--Setting EPP class1-->
 			<setting>
-				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6864 </settingGuid>
+				<name> PERFEPP1 </name>
 
 				<!--Min AC value-->
 				<acMinValue> 33 </acMinValue>
@@ -34,7 +34,7 @@
 
 			<!--Setting SoftParkLatency-->
 			<setting>
-				<settingGuid> 97cfac41-2217-47eb-992d-618b1977c907 </settingGuid>
+				<name> SOFTPARKLATENCY </name>
 				
 				<!-- Value = 0-->
 				<dcValue> 0 </dcValue>
@@ -42,7 +42,7 @@
 
 			<!--Setting SmtUnparkPolicy-->
 			<setting>
-				<settingGuid> b28a6829-c5f7-444e-8f61-10e24e85c532 </settingGuid>
+				<name> SMTUNPARKPOLICY </name>
 
 				<!-- Value = 3-->
 				<dcValue> 3 </dcValue>
@@ -50,7 +50,7 @@
 
 			<!--Setting ModuleUnparkPolicy-->
 			<setting>
-				<settingGuid> b0deaf6b-59c0-4523-8a45-ca7f40244114 </settingGuid>
+				<name> MODULEUNPARKPOLICY </name>
 				
 				<!-- Value = 2-->
 				<dcValue> 2 </dcValue>
@@ -60,15 +60,15 @@
 
 		<!--MedQoS profile-->
 		<profile>
-			<profileGuid> a4a61b5f-f42c-4d23-b3ab-5c27df9f0f18 </profileGuid>
+			<name> Profile_MediumQos </name>
 
 			<!--Setting EPP class0-->
 			<setting>
-				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6863 </settingGuid>
+				<name> PERFEPP </name>
 
 				<!--Distance to the default profile >= 20-->
 				<dcMinDistanceToProfile>
-					<profile> 00000000-0000-0000-0000-000000000000 </profile>
+					<profile> Profile_Default </profile>
 					<distance> 10 </distance>
 				</dcMinDistanceToProfile>
 
@@ -76,11 +76,11 @@
 
 			<!--Setting EPP class1-->
 			<setting>
-				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6864 </settingGuid>
+				<name> PERFEPP1 </name>
 
 				<!--Distance to the default profile >= 20-->
 				<dcMinDistanceToProfile>
-					<profile> 00000000-0000-0000-0000-000000000000 </profile>
+					<profile> Profile_Default </profile>
 					<distance> 10 </distance>
 				</dcMinDistanceToProfile>
 
@@ -89,15 +89,15 @@
 		
 		<!--LowQoS profile-->
 		<profile> 
-			<profileGuid> c04a802d-2205-4910-ae98-3b51e3bb72f2 </profileGuid>
+			<name> Profile_LowQos </name>
 			
 			<!--Setting EPP class0-->
 			<setting>
-				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6863 </settingGuid>
+				<name> PERFEPP </name>
 
 				<!--Distance to the default profile >= 20-->
 				<dcMinDistanceToProfile>
-					<profile> 00000000-0000-0000-0000-000000000000 </profile>
+					<profile> Profile_Default </profile>
 					<distance> 10 </distance>
 				</dcMinDistanceToProfile>
 
@@ -105,11 +105,11 @@
 
 			<!--Setting EPP class1-->
 			<setting>
-				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6864 </settingGuid>
+				<name> PERFEPP1 </name>
 
 				<!--Distance to the default profile >= 20-->
 				<dcMinDistanceToProfile>
-					<profile> 00000000-0000-0000-0000-000000000000 </profile>
+					<profile> Profile_Default </profile>
 					<distance> 10 </distance>
 				</dcMinDistanceToProfile>
 
@@ -117,7 +117,15 @@
 			
 			<!--Frequency Cap-->
 			<setting>
-				<settingGuid> 75b0ae3f-bce0-45a7-8c89-c9611c25e100 </settingGuid>
+				<name> PROCFREQMAX </name>
+
+				<!--DC Fmax = 1500-->
+				<dcMaxValue> 1500 </dcMaxValue>
+			</setting>
+
+			<!--Frequency Cap1-->
+			<setting>
+				<name> PROCFREQMAX1 </name>
 
 				<!--DC Fmax = 1500-->
 				<dcMaxValue> 1500 </dcMaxValue>
@@ -127,15 +135,15 @@
 
 		<!--EcoQoS profile-->
 		<profile>
-			<profileGuid> 336c7511-f109-4172-bb3a-3ea51f815ada </profileGuid>
+			<name> Profile_EcoQos </name>
 			
 			<!--EPP class 0-->
 			<setting>
-				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6863 </settingGuid>
+				<name> PERFEPP </name>
 
 				<!--EPP >= LowQoS EPP-->
 				<dcMinDistanceToProfile>
-					<profile> c04a802d-2205-4910-ae98-3b51e3bb72f2 </profile>
+					<profile> Profile_LowQos </profile>
 					<distance> 0 </distance>
 				</dcMinDistanceToProfile>
 				
@@ -143,11 +151,11 @@
 
 			<!--EPP class 1-->
 			<setting>
-				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6864 </settingGuid>
+				<name> PERFEPP1 </name>
 
 				<!--EPP >= LowQoS EPP-->
 				<dcMinDistanceToProfile>
-					<profile> c04a802d-2205-4910-ae98-3b51e3bb72f2 </profile>
+					<profile> Profile_LowQos </profile>
 					<distance> 0 </distance>
 				</dcMinDistanceToProfile>
 
@@ -155,16 +163,24 @@
 			
 			<!--Frequency Cap-->
 			<setting>
-				<settingGuid> 75b0ae3f-bce0-45a7-8c89-c9611c25e100 </settingGuid>
+				<name> PROCFREQMAX </name>
 				
 				<!--DC Fmax = 1500 Mhz-->
 				<dcMaxValue> 1500 </dcMaxValue>
 				
 			</setting>
 
+			<!--Frequency Cap1-->
+			<setting>
+				<name> PROCFREQMAX1 </name>
+
+				<!--DC Fmax = 1500-->
+				<dcMaxValue> 1500 </dcMaxValue>
+			</setting>
+
 			<!--Setting SchedulingPolicy-->
 			<setting>
-				<settingGuid> 93b8b6dc-0698-4d1c-9ee4-0644e900c85d </settingGuid>
+				<name> SCHEDPOLICY </name>
 
 				<!--Prefer Big-->
 				<dcValue> 2 </dcValue>
@@ -172,7 +188,7 @@
 
 			<!--Setting ShortSchedulingPolicy-->
 			<setting>
-				<settingGuid> bae08b81-2d5e-4688-ad6a-13243356654b </settingGuid>
+				<name> SHORTSCHEDPOLICY </name>
 
 				<!--Prefer Big-->
 				<dcValue> 2 </dcValue>
@@ -182,41 +198,49 @@
 
 		<!--UtilityQoS profile-->
 		<profile>
-			<profileGuid> 33cc3a0d-45ee-43ca-86c4-695bfc9a313b </profileGuid>
+			<name> Profile_UtilityQos </name>
 			
 			<!--EPP class 0-->
 			<setting>
-				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6863 </settingGuid>
+				<name> PERFEPP </name>
 
 				<!--EPP >= EcoQoS EPP-->
 				<dcMinDistanceToProfile>
-					<profile> 336c7511-f109-4172-bb3a-3ea51f815ada </profile>
+					<profile> Profile_EcoQos </profile>
 					<distance> 0 </distance>
 				</dcMinDistanceToProfile>
 			</setting>
 
 			<!--EPP class 1-->
 			<setting>
-				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6864 </settingGuid>
+				<name> PERFEPP1 </name>
 
 				<!--EPP >= EcoQoS EPP-->
 				<dcMinDistanceToProfile>
-					<profile> 336c7511-f109-4172-bb3a-3ea51f815ada </profile>
+					<profile> Profile_EcoQos </profile>
 					<distance> 0 </distance>
 				</dcMinDistanceToProfile>
 			</setting>
 
 			<!--Frequency Cap-->
 			<setting>
-				<settingGuid> 75b0ae3f-bce0-45a7-8c89-c9611c25e100 </settingGuid>
+				<name> PROCFREQMAX </name>
 				
 				<!--DC Fmax = 1500 Mhz-->
 				<dcMaxValue> 1500 </dcMaxValue>
 			</setting>
 
+			<!--Frequency Cap1-->
+			<setting>
+				<name> PROCFREQMAX1 </name>
+
+				<!--DC Fmax = 1500-->
+				<dcMaxValue> 1500 </dcMaxValue>
+			</setting>
+
 			<!--Setting SchedulingPolicy-->
 			<setting>
-				<settingGuid> 93b8b6dc-0698-4d1c-9ee4-0644e900c85d </settingGuid>
+				<name> SCHEDPOLICY </name>
 
 				<!--Prefer Big-->
 				<dcValue> 2 </dcValue>
@@ -224,7 +248,7 @@
 
 			<!--Setting ShortSchedulingPolicy-->
 			<setting>
-				<settingGuid> bae08b81-2d5e-4688-ad6a-13243356654b </settingGuid>
+				<name> SHORTSCHEDPOLICY </name>
 
 				<!--Prefer Big-->
 				<dcValue> 2 </dcValue>
@@ -234,11 +258,11 @@
 
 		<!--MMQOS profile-->
 		<profile>
-			<profileGuid>  0c3d5326-944b-4aab-8ad8-fe422a0e50e0 </profileGuid>
+			<name> Profile_MultimediaQos </name>
 
 			<!--Setting EPP class0-->
 			<setting>
-				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6863 </settingGuid>
+				<name> PERFEPP </name>
 
 				<!--EPP = 100-->
 				<dcValue> 100 </dcValue>
@@ -246,7 +270,7 @@
 
 			<!--Setting EPP class1-->
 			<setting>
-				<settingGuid> 36687f9e-e3a5-4dbf-b1dc-15eb381c6864 </settingGuid>
+				<name> PERFEPP1 </name>
 
 				<!--EPP = 100-->
 				<dcValue> 100 </dcValue>
@@ -254,7 +278,7 @@
 			
 			<!--Setting SchedulingPolicy-->
 			<setting>
-				<settingGuid> 93b8b6dc-0698-4d1c-9ee4-0644e900c85d </settingGuid>
+				<name> SCHEDPOLICY </name>
 
 				<!--Prefer Big-->
 				<dcValue> 2 </dcValue>
@@ -262,7 +286,7 @@
 
 			<!--Setting ShortSchedulingPolicy-->
 			<setting>
-				<settingGuid> bae08b81-2d5e-4688-ad6a-13243356654b </settingGuid>
+				<name> SHORTSCHEDPOLICY </name>
 
 				<!--Prefer Big-->
 				<dcValue> 2 </dcValue>
