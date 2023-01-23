@@ -212,13 +212,13 @@ namespace PPMCheckerTool
                 trace.Process();
 
                 // Validate that the necessary data sources are present in order to continue analysis
-                //if (!systemMetadata.HasResult ||
-                //   (!genericEventDataSource.HasResult || genericEventDataSource.Result.Events.Count == 0) ||
-                //   (!genericEventDataSource.Result.Events.Any(x => x.ProviderId.Equals(GUIDS.Microsoft_Windows_Kernel_Processor_Power))) ||
-                //   (!genericEventDataSource.Result.Events.Any(x => x.ProviderId.Equals(GUIDS.Microsoft_Windows_UserModePowerService))))
-                //{
-                //    throw new Exception("No metadata or kernel-processor-power or usermode-power events");
-                //}
+                if (!systemMetadata.HasResult ||
+                   (!genericEventDataSource.HasResult || genericEventDataSource.Result.Events.Count == 0) ||
+                   (!genericEventDataSource.Result.Events.Any(x => x.ProviderId.Equals(GUIDS.Microsoft_Windows_Kernel_Processor_Power))) ||
+                   (!genericEventDataSource.Result.Events.Any(x => x.ProviderId.Equals(GUIDS.Microsoft_Windows_UserModePowerService))))
+                {
+                    throw new Exception("No metadata or kernel-processor-power or usermode-power events");
+                }
 
                 // Guid to Friendly Name file
                 try
@@ -284,7 +284,6 @@ namespace PPMCheckerTool
                 // The empty Try catch block is to circumvent a TraceData exception due to two data sources disagreeing on the number of processors
                 try
                 {
-
                     if (systemMetadata.Result.Processors.Count > 0)
                     {
                         processorModel = systemMetadata.Result.Processors[0].Name;
