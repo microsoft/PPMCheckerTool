@@ -42,21 +42,6 @@ namespace PPMCheckerTool
         private const String FriendlyNameGUIDFile = "FriendlyNameToGuid.csv";
         private const String PPMSettingRulesXMLFile = "PPMSettingRules.xml";
 
-        // Overlay power schemes GUIDs
-        public static Guid GuidDefaultOverlay = new Guid("00000000-0000-0000-0000-000000000000");
-        public static Guid GuidBetterBatteryOverlay = new Guid("961CC777-2547-4F9D-8174-7D86181b8A7A");
-        public static Guid GuidBetterPerfOverlay = new Guid("381B4222-F694-41F0-9685-FF5BB260DF2E");
-        public static Guid GuidBestPerfOverlay = new Guid("DED574B5-45A0-4F42-8737-46345C09C238");
-        public static Guid GuidSurfaceBetterPerfOverlay = new Guid("3af9b8d9-7c97-431d-ad78-34a8bfea439f");
-
-        // PPM settings GUIDs
-        public static Guid GuidEPP = new Guid("36687f9e-e3a5-4dbf-b1dc-15eb381c6863");
-        public static Guid GuidFrequencyCap = new Guid("75b0ae3f-bce0-45a7-8c89-c9611c25e100");
-        public static Guid GuidSchedulingPolicy = new Guid("93b8b6dc-0698-4d1c-9ee4-0644e900c85d");
-        public static Guid GuidShortSchedulingPolicy = new Guid("bae08b81-2d5e-4688-ad6a-13243356654b");
-        public static Guid GuidCPMinCores = new Guid("0cc5b647-c1df-4637-891a-dec35c318583");
-        public static Guid GuidCPMaxCores = new Guid("ea062031-0e34-4ff1-9b6d-eb1059334028");
-
         // Power profiles GUIDs
         public static Guid GuidDefault = new Guid("00000000-0000-0000-0000-000000000000");
         public static Guid GuidSustainedPerf = new Guid("0aabb002-a307-447e-9b81-1d819df6c6d0");
@@ -294,12 +279,14 @@ namespace PPMCheckerTool
                 int buildRevision = systemMetadata.Result.OSVersion.Revision; 
                 string processorModel = "";
                 bool? isHybridSystem = null;
-                if (systemMetadata.Result.Processors.Count > 0)
-                {
-                    processorModel = systemMetadata.Result.Processors[0].Name;
-                    // If more than 1 type of core, then it is a hybrid system
-                    isHybridSystem = systemMetadata.Result.Processors.GroupBy(x => x.EfficiencyClass).Distinct().Count() > 1 ? true : false;
-                }
+
+                // Let's enable this code later when Sylvain adds the right providers
+                //if (systemMetadata.Result.Processors.Count > 0)
+                //{
+                //    processorModel = systemMetadata.Result.Processors[0].Name;
+                //    // If more than 1 type of core, then it is a hybrid system
+                //    isHybridSystem = systemMetadata.Result.Processors.GroupBy(x => x.EfficiencyClass).Distinct().Count() > 1 ? true : false;
+                //}
 
                 // Optional : Construct list of relevant generic events
                 List<IGenericEvent> QoSSupportChangedEvents = new List<IGenericEvent>();
@@ -443,10 +430,12 @@ namespace PPMCheckerTool
             foreach (XmlNode overlayNode in overlayNodeList)
             {
                 // Get the GUID of the Overlay 
-                if (overlayNode["overlayGuid"] == null) 
+                if (overlayNode["name"] == null) 
                     continue;
 
-                Guid overlayGuid = new Guid(overlayNode["overlayGuid"].InnerText);
+                String overlayName = overlayNode["name"].InnerText.Replace(" ", "");
+                Guid overlayGuid;
+                FriendlyNameToGuid.TryGetValue(overlayName, out overlayGuid);
 
                 // We load only the rules of the effective power overlay 
                 if (overlayGuid != RundownEffectiveOverlayPowerScheme) 
@@ -460,10 +449,13 @@ namespace PPMCheckerTool
                     foreach (XmlNode profieNode in profileNodeList)
                     {
                         // Get the GUID of the profile 
-                        if (profieNode["profileGuid"] == null)
+                        if (profieNode["name"] == null)
                             continue;
 
-                        Guid profileGuid = new Guid(profieNode["profileGuid"].InnerText);
+                        String profileName = profieNode["name"].InnerText.Replace(" ", ""); ;
+                        Guid profileGuid;
+                        FriendlyNameToGuid.TryGetValue(profileName, out profileGuid);
+
                         List<Tuple<Guid, SettingValidationRules>> listPerSettingRules = new List<Tuple<Guid, SettingValidationRules>>();
 
                         // Get the list of settings to validate
@@ -473,10 +465,13 @@ namespace PPMCheckerTool
                         foreach (XmlNode settingNode in settingNodeList)
                         {
                             // Get the GUID of the setting
-                            if (settingNode["settingGuid"] == null)
+                            if (settingNode["name"] == null)
                                 continue;
 
-                            Guid settingGuid = new Guid(settingNode["settingGuid"].InnerText);
+                            String SettingName = settingNode["name"].InnerText.Replace(" ", "");
+                            Guid settingGuid;
+                            FriendlyNameToGuid.TryGetValue(SettingName, out settingGuid);
+
                             SettingValidationRules settingValidationRules = new SettingValidationRules();
 
                             // Absolute value in AC mode
@@ -502,7 +497,10 @@ namespace PPMCheckerTool
                             {
                                 if (settingNode["acMinDistanceToProfile"]["profile"] != null && settingNode["acMinDistanceToProfile"]["distance"] != null)
                                 {
-                                    Guid refProfileGuid = new Guid(settingNode["acMinDistanceToProfile"]["profile"].InnerText);
+                                    String refProfileName = settingNode["acMinDistanceToProfile"]["profile"].InnerText.Replace(" ", "");
+                                    Guid refProfileGuid;
+                                    FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
+
                                     int distance = Convert.ToInt32(settingNode["acMinDistanceToProfile"]["distance"].InnerText);
                                     settingValidationRules.acMinDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
                                 }
@@ -513,7 +511,10 @@ namespace PPMCheckerTool
                             {
                                 if (settingNode["acMaxDistanceToProfile"]["profile"] != null && settingNode["acMaxDistanceToProfile"]["distance"] != null)
                                 {
-                                    Guid refProfileGuid = new Guid(settingNode["acMaxDistanceToProfile"]["profile"].InnerText);
+                                    String refProfileName = settingNode["acMaxDistanceToProfile"]["profile"].InnerText.Replace(" ", "");
+                                    Guid refProfileGuid;
+                                    FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
+
                                     int distance = Convert.ToInt32(settingNode["acMaxDistanceToProfile"]["distance"].InnerText);
                                     settingValidationRules.acMaxDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
                                 }
@@ -542,7 +543,10 @@ namespace PPMCheckerTool
                             {
                                 if (settingNode["dcMinDistanceToProfile"]["profile"] != null && settingNode["dcMinDistanceToProfile"]["distance"] != null)
                                 {
-                                    Guid refProfileGuid = new Guid(settingNode["dcMinDistanceToProfile"]["profile"].InnerText);
+                                    String refProfileName = settingNode["dcMinDistanceToProfile"]["profile"].InnerText.Replace(" ", "");
+                                    Guid refProfileGuid;
+                                    FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
+
                                     int distance = Convert.ToInt32(settingNode["dcMinDistanceToProfile"]["distance"].InnerText);
                                     settingValidationRules.dcMinDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
                                 }
@@ -553,7 +557,10 @@ namespace PPMCheckerTool
                             {
                                 if (settingNode["dcMaxDistanceToProfile"]["profile"] != null && settingNode["dcMaxDistanceToProfile"]["distance"] != null)
                                 {
-                                    Guid refProfileGuid = new Guid(settingNode["dcMaxDistanceToProfile"]["profile"].InnerText);
+                                    String refProfileName = settingNode["dcMaxDistanceToProfile"]["profile"].InnerText.Replace(" ", "");
+                                    Guid refProfileGuid;
+                                    FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
+
                                     int distance = Convert.ToInt32(settingNode["dcMaxDistanceToProfile"]["distance"].InnerText);
                                     settingValidationRules.dcMaxDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
                                 }
