@@ -64,7 +64,7 @@ namespace PPMCheckerTool
         public static String RundownEffectiveOverlayPowerSchemeString = String.Empty;
 
         // Default Overlay Scheme name
-        public const String DefaultOverlayScheme = "Default Overlay Scheme: Balanced (Non-Surface) / Recommended (Surface)";
+        public const String DefaultOverlayScheme = "OEM Default Overlay Scheme";
 
         // Validation rules associated with each PPM setting
         public struct SettingValidationRules
@@ -169,6 +169,7 @@ namespace PPMCheckerTool
 
                 var inputFile = GetRequiredArgument(args, "-i");
                 var outputFile = GetRequiredArgument(args, "-o");
+                var cpuId = "ADL_U";
 
                 // Handle invalid arguments
                 if (inputFile != null && !File.Exists(inputFile))
@@ -178,7 +179,7 @@ namespace PPMCheckerTool
                 }
 
                 // Process the input ETL trace
-                AnalyzeTrace(inputFile, outputFile);
+                AnalyzeTrace(inputFile, cpuId, outputFile);
 
             }
             catch (ArgumentException e)
@@ -200,7 +201,7 @@ namespace PPMCheckerTool
         /// </summary>
         /// <param name="tracePath"> Input ETL trace </param>
         /// <param name="outputPath"> Output results file </param>
-        static void AnalyzeTrace(string tracePath, string outputPath)
+        static void AnalyzeTrace(string tracePath, string cpuId, string outputPath)
         {
             using (ITraceProcessor trace = TraceProcessor.Create(tracePath))
             {
@@ -391,15 +392,28 @@ namespace PPMCheckerTool
                     }
                 }
 
+                // Open the XML file of the validation rules
+                XmlDocument xmlRulesDoc;
+                try
+                {
+                    xmlRulesDoc = new XmlDocument();
+                    xmlRulesDoc.Load(PPMSettingRulesXMLFile);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("Failed to read/open the XML file that sets the validation rules.", ex);
+                }
+
                 //Add results
                 if (!File.Exists(outputPath))
                 {
                     Results.Add("PPM Checker Tool");
-                    Results.Add("OEMModel: " + oemModel);
-                    Results.Add("OEMName: " + oemName);
+                    Results.Add("Rule XML file version: " + xmlRulesDoc.SelectSingleNode("/PpmValidationRules").Attributes["version"].Value);
+                    Results.Add("OEM Model: " + oemModel);
+                    Results.Add("OEM Name: " + oemName);
                     Results.Add("Build Number: " + buildNumber + "." + buildRevision);
                     Results.Add("Processor Model: " + processorModel);
-                    Results.Add("IsHybridSystem: " + isHybridSystem);
+                    Results.Add("Is Hybrid System: " + isHybridSystem);
                     Results.Add("===============================================================================");
                 }
 
@@ -407,7 +421,7 @@ namespace PPMCheckerTool
                 Results.Add("Rundown Effective Power Overlay: " + RundownEffectiveOverlayPowerSchemeString);
 
                 // Read the validation rules from the XML file
-                ReadValidationRules();
+                ReadValidationRules(xmlRulesDoc, cpuId);
 
                 // Validate PPM settings
                 ValidatePPMSettings();
@@ -422,162 +436,157 @@ namespace PPMCheckerTool
         /// The validation rules are specified in an XML file
         /// The method load the validation rules in the data structure ValidationRules
         /// </summary>
-        public static void ReadValidationRules()
+        /// <param name="doc"> XML doc that sets the validation rules </param>
+        /// <param name="targetCpu"> Target CPU Id  </param>
+        public static void ReadValidationRules(XmlDocument doc, string targetCpu)
         {
-            // Read the XML file
-            Assembly assembly = Assembly.GetExecutingAssembly();
-            string fileName = PPMSettingRulesXMLFile; 
-            XmlDocument doc = new XmlDocument();
-            doc.Load(fileName);
-
-            // Parse the power overlays
-            XmlNodeList overlayNodeList = doc.SelectNodes("/validationRules/overlay");
-            foreach (XmlNode overlayNode in overlayNodeList)
+            // Extract the rules associated with the target CPU
+            XmlNodeList cpuNodeList = doc.SelectNodes("/PpmValidationRules/TargetCPU");
+            foreach (XmlNode cpuNode in cpuNodeList)
             {
-                // Get the GUID of the Overlay 
-                if (overlayNode["name"] == null) 
-                    continue;
+                String cpuName = cpuNode.Attributes["name"].Value;
+                if (cpuName != targetCpu) continue;
 
-                String overlayName = overlayNode["name"].InnerText.Replace(" ", "");
-                Guid overlayGuid;
-                FriendlyNameToGuid.TryGetValue(overlayName, out overlayGuid);
-
-                // We load only the rules of the effective power overlay 
-                if (overlayGuid != RundownEffectiveOverlayPowerScheme) 
-                    continue;
-
-                // Get the list of profiles to validate
-                XmlNodeList profileNodeList = overlayNode.SelectNodes("profile");
-
-                // Iterate over all the profiles
+                // Iterate over the power overlays
+                XmlNodeList overlayNodeList = cpuNode.SelectNodes("Overlay");
+                foreach (XmlNode overlayNode in overlayNodeList)
                 {
-                    foreach (XmlNode profieNode in profileNodeList)
+                    // Get the GUID of the Overlay 
+                    String overlayName = overlayNode.Attributes["name"].Value;
+                    Guid overlayGuid;
+                    FriendlyNameToGuid.TryGetValue(overlayName, out overlayGuid);
+
+                    // We load only the rules of the effective power overlay 
+                    if (overlayGuid != RundownEffectiveOverlayPowerScheme)
+                        continue;
+
+                    // Get the list of profiles to validate
+                    XmlNodeList profileNodeList = overlayNode.SelectNodes("Profile");
+
+                    // Iterate over all the profiles
                     {
-                        // Get the GUID of the profile 
-                        if (profieNode["name"] == null)
-                            continue;
-
-                        String profileName = profieNode["name"].InnerText.Replace(" ", ""); ;
-                        Guid profileGuid;
-                        FriendlyNameToGuid.TryGetValue(profileName, out profileGuid);
-
-                        List<Tuple<Guid, SettingValidationRules>> listPerSettingRules = new List<Tuple<Guid, SettingValidationRules>>();
-
-                        // Get the list of settings to validate
-                        XmlNodeList settingNodeList = profieNode.SelectNodes("setting");
-
-                        // Iterate over all the settings
-                        foreach (XmlNode settingNode in settingNodeList)
+                        foreach (XmlNode profieNode in profileNodeList)
                         {
-                            // Get the GUID of the setting
-                            if (settingNode["name"] == null)
-                                continue;
+                            String profileName = profieNode.Attributes["name"].Value; ;
+                            Guid profileGuid;
+                            FriendlyNameToGuid.TryGetValue(profileName, out profileGuid);
 
-                            String SettingName = settingNode["name"].InnerText.Replace(" ", "");
-                            Guid settingGuid;
-                            FriendlyNameToGuid.TryGetValue(SettingName, out settingGuid);
+                            List<Tuple<Guid, SettingValidationRules>> listPerSettingRules = new List<Tuple<Guid, SettingValidationRules>>();
 
-                            SettingValidationRules settingValidationRules = new SettingValidationRules();
+                            // Get the list of settings to validate
+                            XmlNodeList settingNodeList = profieNode.SelectNodes("Setting");
 
-                            // Absolute value in AC mode
-                            if (settingNode["acValue"] != null)
+                            // Iterate over all the settings
+                            foreach (XmlNode settingNode in settingNodeList)
                             {
-                                settingValidationRules.acValue = Convert.ToUInt32(settingNode["acValue"].InnerText);
-                            }
+                                // Get the GUID of the setting
+                                String SettingName = settingNode.Attributes["name"].Value;
+                                Guid settingGuid;
+                                FriendlyNameToGuid.TryGetValue(SettingName, out settingGuid);
 
-                            // Min bound in AC mode
-                            if (settingNode["acMinValue"] != null)
-                            {
-                                settingValidationRules.acMinValue = Convert.ToUInt32(settingNode["acMinValue"].InnerText);
-                            }
+                                SettingValidationRules settingValidationRules = new SettingValidationRules();
 
-                            // Max bound in AC mode
-                            if (settingNode["acMaxValue"] != null)
-                            {
-                                settingValidationRules.acMaxValue = Convert.ToUInt32(settingNode["acMaxValue"].InnerText);
-                            }
-
-                            // Min Distance to profile in AC mode
-                            if (settingNode["acMinDistanceToProfile"] != null)
-                            {
-                                if (settingNode["acMinDistanceToProfile"]["profile"] != null && settingNode["acMinDistanceToProfile"]["distance"] != null)
+                                // Value in AC mode
+                                if (settingNode["AcValue"] != null)
                                 {
-                                    String refProfileName = settingNode["acMinDistanceToProfile"]["profile"].InnerText.Replace(" ", "");
-                                    Guid refProfileGuid;
-                                    FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
-
-                                    int distance = Convert.ToInt32(settingNode["acMinDistanceToProfile"]["distance"].InnerText);
-                                    settingValidationRules.acMinDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
+                                    settingValidationRules.acValue = Convert.ToUInt32(settingNode["AcValue"].InnerText);
                                 }
-                            }
 
-                            // Max Distance to profile in AC mode
-                            if (settingNode["acMaxDistanceToProfile"] != null)
-                            {
-                                if (settingNode["acMaxDistanceToProfile"]["profile"] != null && settingNode["acMaxDistanceToProfile"]["distance"] != null)
+                                // Min bound in AC mode
+                                if (settingNode["AcMinValue"] != null)
                                 {
-                                    String refProfileName = settingNode["acMaxDistanceToProfile"]["profile"].InnerText.Replace(" ", "");
-                                    Guid refProfileGuid;
-                                    FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
-
-                                    int distance = Convert.ToInt32(settingNode["acMaxDistanceToProfile"]["distance"].InnerText);
-                                    settingValidationRules.acMaxDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
+                                    settingValidationRules.acMinValue = Convert.ToUInt32(settingNode["AcMinValue"].InnerText);
                                 }
-                            }
 
-                            // Absolute value in DC mode
-                            if (settingNode["dcValue"] != null)
-                            {
-                                settingValidationRules.dcValue = Convert.ToUInt32(settingNode["dcValue"].InnerText);
-                            }
-
-                            // Min bound in DC mode
-                            if (settingNode["dcMinValue"] != null)
-                            {
-                                settingValidationRules.dcMinValue = Convert.ToUInt32(settingNode["dcMinValue"].InnerText);
-                            }
-
-                            // Max bound in DC mode
-                            if (settingNode["dcMaxValue"] != null)
-                            {
-                                settingValidationRules.dcMaxValue = Convert.ToUInt32(settingNode["dcMaxValue"].InnerText);
-                            }
-
-                            // Min Distance to profile in DC mode
-                            if (settingNode["dcMinDistanceToProfile"] != null)
-                            {
-                                if (settingNode["dcMinDistanceToProfile"]["profile"] != null && settingNode["dcMinDistanceToProfile"]["distance"] != null)
+                                // Max bound in AC mode
+                                if (settingNode["AcMaxValue"] != null)
                                 {
-                                    String refProfileName = settingNode["dcMinDistanceToProfile"]["profile"].InnerText.Replace(" ", "");
-                                    Guid refProfileGuid;
-                                    FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
-
-                                    int distance = Convert.ToInt32(settingNode["dcMinDistanceToProfile"]["distance"].InnerText);
-                                    settingValidationRules.dcMinDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
+                                    settingValidationRules.acMaxValue = Convert.ToUInt32(settingNode["AcMaxValue"].InnerText);
                                 }
-                            }
 
-                            // Max Distance to profile in DC mode
-                            if (settingNode["dcMaxDistanceToProfile"] != null)
-                            {
-                                if (settingNode["dcMaxDistanceToProfile"]["profile"] != null && settingNode["dcMaxDistanceToProfile"]["distance"] != null)
+                                // Min Distance to profile in AC mode
+                                if (settingNode["AcMinDistanceToProfile"] != null)
                                 {
-                                    String refProfileName = settingNode["dcMaxDistanceToProfile"]["profile"].InnerText.Replace(" ", "");
-                                    Guid refProfileGuid;
-                                    FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
+                                    if (settingNode["AcMinDistanceToProfile"]["Profile"] != null && settingNode["AcMinDistanceToProfile"]["Distance"] != null)
+                                    {
+                                        String refProfileName = settingNode["AcMinDistanceToProfile"]["Profile"].InnerText.Replace(" ", "");
+                                        Guid refProfileGuid;
+                                        FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
 
-                                    int distance = Convert.ToInt32(settingNode["dcMaxDistanceToProfile"]["distance"].InnerText);
-                                    settingValidationRules.dcMaxDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
+                                        int distance = Convert.ToInt32(settingNode["AcMinDistanceToProfile"]["Distance"].InnerText);
+                                        settingValidationRules.acMinDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
+                                    }
                                 }
+
+                                // Max Distance to profile in AC mode
+                                if (settingNode["AcMaxDistanceToProfile"] != null)
+                                {
+                                    if (settingNode["AcMaxDistanceToProfile"]["Profile"] != null && settingNode["AcMaxDistanceToProfile"]["Distance"] != null)
+                                    {
+                                        String refProfileName = settingNode["AcMaxDistanceToProfile"]["Profile"].InnerText.Replace(" ", "");
+                                        Guid refProfileGuid;
+                                        FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
+
+                                        int distance = Convert.ToInt32(settingNode["AcMaxDistanceToProfile"]["Distance"].InnerText);
+                                        settingValidationRules.acMaxDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
+                                    }
+                                }
+
+                                // Value in DC mode
+                                if (settingNode["DcValue"] != null)
+                                {
+                                    settingValidationRules.dcValue = Convert.ToUInt32(settingNode["DcValue"].InnerText);
+                                }
+
+                                // Min bound in DC mode
+                                if (settingNode["DcMinValue"] != null)
+                                {
+                                    settingValidationRules.dcMinValue = Convert.ToUInt32(settingNode["DcMinValue"].InnerText);
+                                }
+
+                                // Max bound in DC mode
+                                if (settingNode["DcMaxValue"] != null)
+                                {
+                                    settingValidationRules.dcMaxValue = Convert.ToUInt32(settingNode["DcMaxValue"].InnerText);
+                                }
+
+                                // Min Distance to profile in DC mode
+                                if (settingNode["DcMinDistanceToProfile"] != null)
+                                {
+                                    if (settingNode["DcMinDistanceToProfile"]["Profile"] != null && settingNode["DcMinDistanceToProfile"]["Distance"] != null)
+                                    {
+                                        String refProfileName = settingNode["DcMinDistanceToProfile"]["Profile"].InnerText.Replace(" ", "");
+                                        Guid refProfileGuid;
+                                        FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
+
+                                        int distance = Convert.ToInt32(settingNode["DcMinDistanceToProfile"]["Distance"].InnerText);
+                                        settingValidationRules.dcMinDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
+                                    }
+                                }
+
+                                // Max Distance to profile in DC mode
+                                if (settingNode["DcMaxDistanceToProfile"] != null)
+                                {
+                                    if (settingNode["DcMaxDistanceToProfile"]["Profile"] != null && settingNode["DcMaxDistanceToProfile"]["Distance"] != null)
+                                    {
+                                        String refProfileName = settingNode["DcMaxDistanceToProfile"]["Profile"].InnerText.Replace(" ", "");
+                                        Guid refProfileGuid;
+                                        FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
+
+                                        int distance = Convert.ToInt32(settingNode["DcMaxDistanceToProfile"]["Distance"].InnerText);
+                                        settingValidationRules.dcMaxDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
+                                    }
+                                }
+
+                                listPerSettingRules.Add(new Tuple<Guid, SettingValidationRules>(settingGuid, settingValidationRules));
                             }
 
-                            listPerSettingRules.Add(new Tuple<Guid, SettingValidationRules>(settingGuid, settingValidationRules));
+                            // Add a new validation rule
+                            PerProfileValidationRules.Add(profileGuid, listPerSettingRules);
                         }
-
-                        // Add a new rule
-                        PerProfileValidationRules.Add(profileGuid, listPerSettingRules);
                     }
                 }
+                break;
             }
         }
 

@@ -1,299 +1,267 @@
-<validationRules>
+<PpmValidationRules version = "2023.1.0">
 	
-	<!--Default overlay power scheme-->
-	<overlay>
-		<name> Overlay_Default </name>
+	<TargetCPU name="ADL_U">
+		<Overlay name="Overlay_Default">
+
+			<!--Default profile-->
+			<Profile name="Profile_Default">
+
+				<!--Setting EPP class0-->
+				<Setting name="PERFEPP">
+					
+					<!--Min AC value-->
+					<AcMinValue> 33 </AcMinValue>
+
+					<!--Min DC value-->
+					<DcMinValue> 60 </DcMinValue>
+
+				</Setting>
+
+				<!--Setting EPP class1-->
+				<Setting name="PERFEPP1">
+					
+					<!--Min AC value-->
+					<AcMinValue> 33 </AcMinValue>
+
+					<!--Min DC value-->
+					<DcMinValue> 60 </DcMinValue>
+
+				</Setting>
+
+				<!--Setting SoftParkLatency-->
+				<Setting name="SOFTPARKLATENCY">
+
+					<!-- Value = 0-->
+					<DcValue> 0 </DcValue>
+				</Setting>
+
+				<!--Setting SmtUnparkPolicy-->
+				<Setting name="SMTUNPARKPOLICY">
+
+					<!-- Value = 3-->
+					<DcValue> 3 </DcValue>
+				</Setting>
+
+				<!--Setting ModuleUnparkPolicy-->
+				<Setting name="MODULEUNPARKPOLICY">
+
+					<!-- Value = 2-->
+					<DcValue> 2 </DcValue>
+
+				</Setting>
+			</Profile>
+
+			<!--MedQoS profile-->
+			<Profile name="Profile_MediumQos">
+
+				<!--Setting EPP class0-->
+				<Setting name="PERFEPP">
+
+					<!--Distance to the default profile >= 20-->
+					<DcMinDistanceToProfile>
+						<Profile> Profile_Default </Profile>
+						<Distance> 10 </Distance>
+					</DcMinDistanceToProfile>
+
+				</Setting>
+
+				<!--Setting EPP class1-->
+				<Setting name="PERFEPP1">
+
+					<!--Distance to the default profile >= 20-->
+					<DcMinDistanceToProfile>
+						<Profile> Profile_Default </Profile>
+						<Distance> 10 </Distance>
+					</DcMinDistanceToProfile>
+
+				</Setting>
+			</Profile>
+
+			<!--LowQoS profile-->
+			<Profile name="Profile_LowQos">
+
+				<!--Setting EPP class0-->
+				<Setting name="PERFEPP">
+
+					<!--Distance to the default profile >= 20-->
+					<DcMinDistanceToProfile>
+						<Profile> Profile_Default </Profile>
+						<Distance> 10 </Distance>
+					</DcMinDistanceToProfile>
+
+				</Setting>
+
+				<!--Setting EPP class1-->
+				<Setting name="PERFEPP1">
+
+					<!--Distance to the default profile >= 20-->
+					<DcMinDistanceToProfile>
+						<Profile> Profile_Default </Profile>
+						<Distance> 10 </Distance>
+					</DcMinDistanceToProfile>
+
+				</Setting>
+
+				<!--Frequency Cap-->
+				<Setting name="PROCFREQMAX">
+
+					<!--DC Fmax = 1500-->
+					<DcMaxValue> 1500 </DcMaxValue>
+				</Setting>
+
+				<!--Frequency Cap1-->
+				<Setting name="PROCFREQMAX1">
+
+					<!--DC Fmax = 1500-->
+					<DcMaxValue> 1500 </DcMaxValue>
+				</Setting>
+
+			</Profile>
+
+			<!--EcoQoS profile-->
+			<Profile name="Profile_EcoQos">
+
+				<!--EPP class 0-->
+				<Setting name="PERFEPP">
+
+					<!--EPP >= LowQoS EPP-->
+					<DcMinDistanceToProfile>
+						<Profile> Profile_LowQos </Profile>
+						<Distance> 0 </Distance>
+					</DcMinDistanceToProfile>
+
+				</Setting>
+
+				<!--EPP class 1-->
+				<Setting name="PERFEPP1">
+
+					<!--EPP >= LowQoS EPP-->
+					<DcMinDistanceToProfile>
+						<Profile> Profile_LowQos </Profile>
+						<Distance> 0 </Distance>
+					</DcMinDistanceToProfile>
+
+				</Setting>
+
+				<!--Frequency Cap-->
+				<Setting name="PROCFREQMAX">
+
+					<!--DC Fmax = 1500 Mhz-->
+					<DcMaxValue> 1500 </DcMaxValue>
+
+				</Setting>
+
+				<!--Frequency Cap1-->
+				<Setting name="PROCFREQMAX1">
+
+					<!--DC Fmax = 1500-->
+					<DcMaxValue> 1500 </DcMaxValue>
+				</Setting>
+
+				<!--Setting SchedulingPolicy-->
+				<Setting name="SCHEDPOLICY">
+					
+					<!--Prefer Big-->
+					<DcValue> 2 </DcValue>
+				</Setting>
+
+				<!--Setting ShortSchedulingPolicy-->
+				<Setting name="SHORTSCHEDPOLICY">
+
+					<!--Prefer Big-->
+					<DcValue> 2 </DcValue>
+				</Setting>
+
+			</Profile>
+
+			<!--UtilityQoS profile-->
+			<Profile name="Profile_UtilityQos">
+
+				<!--EPP class 0-->
+				<Setting name="PERFEPP">
+
+					<!--EPP >= EcoQoS EPP-->
+					<DcMinDistanceToProfile>
+						<Profile> Profile_EcoQos </Profile>
+						<Distance> 0 </Distance>
+					</DcMinDistanceToProfile>
+				</Setting>
+
+				<!--EPP class 1-->
+				<Setting name="PERFEPP1">
+
+					<!--EPP >= EcoQoS EPP-->
+					<DcMinDistanceToProfile>
+						<Profile> Profile_EcoQos </Profile>
+						<Distance> 0 </Distance>
+					</DcMinDistanceToProfile>
+				</Setting>
+
+				<!--Frequency Cap-->
+				<Setting name="PROCFREQMAX">
+
+					<!--DC Fmax = 1500 Mhz-->
+					<DcMaxValue> 1500 </DcMaxValue>
+				</Setting>
+
+				<!--Frequency Cap1-->
+				<Setting name="PROCFREQMAX1">
+
+					<!--DC Fmax = 1500-->
+					<DcMaxValue> 1500 </DcMaxValue>
+				</Setting>
+
+				<!--Setting SchedulingPolicy-->
+				<Setting name="SCHEDPOLICY">
+
+					<!--Prefer Big-->
+					<DcValue> 2 </DcValue>
+				</Setting>
+
+				<!--Setting ShortSchedulingPolicy-->
+				<Setting name="SHORTSCHEDPOLICY">
+
+					<!--Prefer Big-->
+					<DcValue> 2 </DcValue>
+				</Setting>
+
+			</Profile>
+
+			<!--MMQOS profile-->
+			<Profile name ="Profile_MultimediaQos">
+
+				<!--Setting EPP class0-->
+				<Setting name="PERFEPP">
+
+					<!--EPP = 100-->
+					<DcValue> 100 </DcValue>
+				</Setting>
+
+				<!--Setting EPP class1-->
+				<Setting name="PERFEPP1">
+
+					<!--EPP = 100-->
+					<DcValue> 100 </DcValue>
+				</Setting>
+
+				<!--Setting SchedulingPolicy-->
+				<Setting name="SCHEDPOLICY">
+
+					<!--Prefer Big-->
+					<DcValue> 2 </DcValue>
+				</Setting>
+
+				<!--Setting ShortSchedulingPolicy-->
+				<Setting name="SHORTSCHEDPOLICY">
+
+					<!--Prefer Big-->
+					<DcValue> 2 </DcValue>
+				</Setting>
+
+			</Profile>
+
+		</Overlay>
 		
-		<!--Default profile-->
-		<profile>
-			<name> Profile_Default </name>
-			
-			<!--Setting EPP class0-->
-			<setting>
-				<name> PERFEPP </name>
-				
-				<!--Min AC value-->
-				<acMinValue> 33 </acMinValue>
+	</TargetCPU>
 
-				<!--Min DC value-->
-				<dcMinValue> 60 </dcMinValue>
-				
-			</setting>
-
-			<!--Setting EPP class1-->
-			<setting>
-				<name> PERFEPP1 </name>
-
-				<!--Min AC value-->
-				<acMinValue> 33 </acMinValue>
-
-				<!--Min DC value-->
-				<dcMinValue> 60 </dcMinValue>
-
-			</setting>
-
-			<!--Setting SoftParkLatency-->
-			<setting>
-				<name> SOFTPARKLATENCY </name>
-				
-				<!-- Value = 0-->
-				<dcValue> 0 </dcValue>
-			</setting>
-
-			<!--Setting SmtUnparkPolicy-->
-			<setting>
-				<name> SMTUNPARKPOLICY </name>
-
-				<!-- Value = 3-->
-				<dcValue> 3 </dcValue>
-			</setting>
-
-			<!--Setting ModuleUnparkPolicy-->
-			<setting>
-				<name> MODULEUNPARKPOLICY </name>
-				
-				<!-- Value = 2-->
-				<dcValue> 2 </dcValue>
-				
-			</setting>
-		</profile>
-
-		<!--MedQoS profile-->
-		<profile>
-			<name> Profile_MediumQos </name>
-
-			<!--Setting EPP class0-->
-			<setting>
-				<name> PERFEPP </name>
-
-				<!--Distance to the default profile >= 20-->
-				<dcMinDistanceToProfile>
-					<profile> Profile_Default </profile>
-					<distance> 10 </distance>
-				</dcMinDistanceToProfile>
-
-			</setting>
-
-			<!--Setting EPP class1-->
-			<setting>
-				<name> PERFEPP1 </name>
-
-				<!--Distance to the default profile >= 20-->
-				<dcMinDistanceToProfile>
-					<profile> Profile_Default </profile>
-					<distance> 10 </distance>
-				</dcMinDistanceToProfile>
-
-			</setting>
-		</profile>
-		
-		<!--LowQoS profile-->
-		<profile> 
-			<name> Profile_LowQos </name>
-			
-			<!--Setting EPP class0-->
-			<setting>
-				<name> PERFEPP </name>
-
-				<!--Distance to the default profile >= 20-->
-				<dcMinDistanceToProfile>
-					<profile> Profile_Default </profile>
-					<distance> 10 </distance>
-				</dcMinDistanceToProfile>
-
-			</setting>
-
-			<!--Setting EPP class1-->
-			<setting>
-				<name> PERFEPP1 </name>
-
-				<!--Distance to the default profile >= 20-->
-				<dcMinDistanceToProfile>
-					<profile> Profile_Default </profile>
-					<distance> 10 </distance>
-				</dcMinDistanceToProfile>
-
-			</setting>
-			
-			<!--Frequency Cap-->
-			<setting>
-				<name> PROCFREQMAX </name>
-
-				<!--DC Fmax = 1500-->
-				<dcMaxValue> 1500 </dcMaxValue>
-			</setting>
-
-			<!--Frequency Cap1-->
-			<setting>
-				<name> PROCFREQMAX1 </name>
-
-				<!--DC Fmax = 1500-->
-				<dcMaxValue> 1500 </dcMaxValue>
-			</setting>
-
-		</profile>
-
-		<!--EcoQoS profile-->
-		<profile>
-			<name> Profile_EcoQos </name>
-			
-			<!--EPP class 0-->
-			<setting>
-				<name> PERFEPP </name>
-
-				<!--EPP >= LowQoS EPP-->
-				<dcMinDistanceToProfile>
-					<profile> Profile_LowQos </profile>
-					<distance> 0 </distance>
-				</dcMinDistanceToProfile>
-				
-			</setting>
-
-			<!--EPP class 1-->
-			<setting>
-				<name> PERFEPP1 </name>
-
-				<!--EPP >= LowQoS EPP-->
-				<dcMinDistanceToProfile>
-					<profile> Profile_LowQos </profile>
-					<distance> 0 </distance>
-				</dcMinDistanceToProfile>
-
-			</setting>
-			
-			<!--Frequency Cap-->
-			<setting>
-				<name> PROCFREQMAX </name>
-				
-				<!--DC Fmax = 1500 Mhz-->
-				<dcMaxValue> 1500 </dcMaxValue>
-				
-			</setting>
-
-			<!--Frequency Cap1-->
-			<setting>
-				<name> PROCFREQMAX1 </name>
-
-				<!--DC Fmax = 1500-->
-				<dcMaxValue> 1500 </dcMaxValue>
-			</setting>
-
-			<!--Setting SchedulingPolicy-->
-			<setting>
-				<name> SCHEDPOLICY </name>
-
-				<!--Prefer Big-->
-				<dcValue> 2 </dcValue>
-			</setting>
-
-			<!--Setting ShortSchedulingPolicy-->
-			<setting>
-				<name> SHORTSCHEDPOLICY </name>
-
-				<!--Prefer Big-->
-				<dcValue> 2 </dcValue>
-			</setting>
-			
-		</profile>
-
-		<!--UtilityQoS profile-->
-		<profile>
-			<name> Profile_UtilityQos </name>
-			
-			<!--EPP class 0-->
-			<setting>
-				<name> PERFEPP </name>
-
-				<!--EPP >= EcoQoS EPP-->
-				<dcMinDistanceToProfile>
-					<profile> Profile_EcoQos </profile>
-					<distance> 0 </distance>
-				</dcMinDistanceToProfile>
-			</setting>
-
-			<!--EPP class 1-->
-			<setting>
-				<name> PERFEPP1 </name>
-
-				<!--EPP >= EcoQoS EPP-->
-				<dcMinDistanceToProfile>
-					<profile> Profile_EcoQos </profile>
-					<distance> 0 </distance>
-				</dcMinDistanceToProfile>
-			</setting>
-
-			<!--Frequency Cap-->
-			<setting>
-				<name> PROCFREQMAX </name>
-				
-				<!--DC Fmax = 1500 Mhz-->
-				<dcMaxValue> 1500 </dcMaxValue>
-			</setting>
-
-			<!--Frequency Cap1-->
-			<setting>
-				<name> PROCFREQMAX1 </name>
-
-				<!--DC Fmax = 1500-->
-				<dcMaxValue> 1500 </dcMaxValue>
-			</setting>
-
-			<!--Setting SchedulingPolicy-->
-			<setting>
-				<name> SCHEDPOLICY </name>
-
-				<!--Prefer Big-->
-				<dcValue> 2 </dcValue>
-			</setting>
-
-			<!--Setting ShortSchedulingPolicy-->
-			<setting>
-				<name> SHORTSCHEDPOLICY </name>
-
-				<!--Prefer Big-->
-				<dcValue> 2 </dcValue>
-			</setting>
-
-		</profile>
-
-		<!--MMQOS profile-->
-		<profile>
-			<name> Profile_MultimediaQos </name>
-
-			<!--Setting EPP class0-->
-			<setting>
-				<name> PERFEPP </name>
-
-				<!--EPP = 100-->
-				<dcValue> 100 </dcValue>
-			</setting>
-
-			<!--Setting EPP class1-->
-			<setting>
-				<name> PERFEPP1 </name>
-
-				<!--EPP = 100-->
-				<dcValue> 100 </dcValue>
-			</setting>
-			
-			<!--Setting SchedulingPolicy-->
-			<setting>
-				<name> SCHEDPOLICY </name>
-
-				<!--Prefer Big-->
-				<dcValue> 2 </dcValue>
-			</setting>
-
-			<!--Setting ShortSchedulingPolicy-->
-			<setting>
-				<name> SHORTSCHEDPOLICY </name>
-
-				<!--Prefer Big-->
-				<dcValue> 2 </dcValue>
-			</setting>
-			
-		</profile>
-
-	</overlay>
-
-</validationRules>
+</PpmValidationRules>
