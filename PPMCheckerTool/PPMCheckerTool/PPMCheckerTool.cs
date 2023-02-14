@@ -398,11 +398,6 @@ namespace PPMCheckerTool
                 {
                     xmlRulesDoc = new XmlDocument();
                     xmlRulesDoc.Load(PPMSettingRulesXMLFile);
-                    if (!File.Exists(outputPath))
-                    {
-                        Results.Add("PPM Checker Tool");
-                        Results.Add("Rule XML file version: " + xmlRulesDoc.SelectSingleNode("/PpmValidationRules").Attributes["version"].Value);
-                    }
                 }
                 catch (Exception ex)
                 {
@@ -412,8 +407,8 @@ namespace PPMCheckerTool
                 //Add results
                 if (!File.Exists(outputPath))
                 {
-                    // Results.Add("PPM Checker Tool");
-                    //Results.Add("Rule XML file version: " + xmlRulesDoc.SelectSingleNode("/PpmValidationRules").Attributes["version"].Value);
+                    Results.Add("PPM Checker Tool");
+                    Results.Add("Rule XML file version: " + xmlRulesDoc.SelectSingleNode("/PpmValidationRules").Attributes["version"].Value);
                     Results.Add("OEM Model: " + oemModel);
                     Results.Add("OEM Name: " + oemName);
                     Results.Add("Build Number: " + buildNumber + "." + buildRevision);
