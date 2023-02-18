@@ -8,6 +8,8 @@ To help this process, we built a tool that the silicon vendors/OEMs can deploy t
 > The Architecture
 > ![image](https://user-images.githubusercontent.com/121056171/210118102-93b0a087-0562-4b1d-baa3-0ef5aae138ce.png)
 
+## Before you run
+Ensure that you create/copy a PPM Setting Rules file.
 
 ## How to use the Automatic Script
 The script is located in the Github release, as well as in the Scripts folder in the PPMCheckerTool.
