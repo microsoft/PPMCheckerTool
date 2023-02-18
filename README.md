@@ -5,9 +5,6 @@ Configuring the PPM settings is a complex process and requires area expertise an
 
 To help this process, we built a tool that the silicon vendors/OEMs can deploy to validate the PPM settings on their new products.
 
-> The process
-> ![image](https://user-images.githubusercontent.com/121056171/210118095-0926239e-2e7f-4dbf-8015-0dfcc630b92b.png)
-
 > The Architecture
 > ![image](https://user-images.githubusercontent.com/121056171/210118102-93b0a087-0562-4b1d-baa3-0ef5aae138ce.png)
 
@@ -23,15 +20,9 @@ Download the release from Github. Unzip it. Run the script Run.ps1 from the Scri
 
 ### To Run the script with the visual studio development environment
 
-Open the solution in Visual Studio, ensure you have no build errors. For this method to work, similar to the above method, you need to ensure that both the projects .exe is in the same folder. Or, you can modify the Run.ps1 script to take hardcoded absolute paths.
-
-Right click on both the projects – PPMCheckerTool and SetSliderPowerMode -> Publish -> Local Folder -> Enter same local folder location.
-
-Run the script Run.ps1
-
-‘ExeLocation’ – Enter the local folder
-
-‘OutputFilePath’ – Enter full name and path of the output file. Eg. D:\Outputs\Output.txt will work. Can be relative path.
+Open the solution in Visual Studio, ensure you have no build errors.
+Click on the down arrow next to the 'Run button' (Green arrow). Add the command line parameters -i <trace.etl>  -o <output.csv/txt>  -t <target CPU>
+Run the solution
 
 
 ## Contributing

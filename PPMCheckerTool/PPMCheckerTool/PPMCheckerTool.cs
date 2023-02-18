@@ -150,7 +150,9 @@ namespace PPMCheckerTool
         /// </summary>
         static void OutputCommandLineUsage()
         {
-            Console.Out.WriteLine("Usage: " + System.AppDomain.CurrentDomain.FriendlyName + " -i <trace.etl>  -o <output.csv>  [-start <StartTime(ns)>]  [-stop <StopTime(ns)>]  [-noHeader]");
+            Console.Out.WriteLine("Usage: " + System.AppDomain.CurrentDomain.FriendlyName + " -i <trace.etl>  -o <output.csv/txt>  -t <target CPU>");
+            Console.Out.WriteLine("Possible target CPUs: ADL_U, ADL_H, ADL_P");
+            Console.Out.WriteLine("Please confirm if the PPM Rules XML File has the definitions for the target CPU");
         }
 
         /// <summary>
@@ -170,7 +172,7 @@ namespace PPMCheckerTool
 
                 var inputFile = GetRequiredArgument(args, "-i");
                 var outputFile = GetRequiredArgument(args, "-o");
-                var cpuId = "ADL_U";
+                var targetCPU = GetRequiredArgument(args, "-t");
 
                 // Handle invalid arguments
                 if (inputFile != null && !File.Exists(inputFile))
@@ -180,7 +182,7 @@ namespace PPMCheckerTool
                 }
 
                 // Process the input ETL trace
-                AnalyzeTrace(inputFile, cpuId, outputFile);
+                AnalyzeTrace(inputFile, targetCPU, outputFile);
 
             }
             catch (ArgumentException e)
@@ -201,8 +203,9 @@ namespace PPMCheckerTool
         /// enumerator of events to process, analyzes relevent time spans and outputs results to csv file.
         /// </summary>
         /// <param name="tracePath"> Input ETL trace </param>
+        /// <param name="targetCPU"> Target CPU string </param>
         /// <param name="outputPath"> Output results file </param>
-        static void AnalyzeTrace(string tracePath, string cpuId, string outputPath)
+        static void AnalyzeTrace(string tracePath, string targetCPU, string outputPath)
         {
             using (ITraceProcessor trace = TraceProcessor.Create(tracePath))
             {
@@ -410,6 +413,8 @@ namespace PPMCheckerTool
                 {
                     Results.Add("PPM Checker Tool");
                     Results.Add("Rule XML file version: " + xmlRulesDoc.SelectSingleNode("/PpmValidationRules").Attributes["version"].Value);
+                    Results.Add("Rules Target CPU: " + targetCPU);
+                    Results.Add("Date: " + System.DateTime.Now.ToString());
                     Results.Add("OEM Model: " + oemModel);
                     Results.Add("OEM Name: " + oemName);
                     Results.Add("Build Number: " + buildNumber + "." + buildRevision);
@@ -422,7 +427,7 @@ namespace PPMCheckerTool
                 Results.Add("Rundown Effective Power Overlay: " + RundownEffectiveOverlayPowerSchemeString);
 
                 // Read the validation rules from the XML file
-                ReadValidationRules(xmlRulesDoc, cpuId);
+                ReadValidationRules(xmlRulesDoc, targetCPU);
 
                 // Validate PPM settings
                 ValidatePPMSettings();
