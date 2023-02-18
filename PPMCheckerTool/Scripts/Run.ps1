@@ -4,7 +4,10 @@ Param(
     [string] $ExeLocation,
 
     [Parameter(Mandatory = $true)]
-    [string] $OutputFilePath
+    [string] $OutputFilePath,
+
+    [Parameter(Mandatory = $true)]
+    [string] $TargetCPU
 )
 
 # 'ExeLocation' is the folder in which the release for both the PPMCheckerTool project and SetSliderPowerMode project resides. Can be a relative path. e.g. D:\PPMCheckerRelease
@@ -59,7 +62,7 @@ process
     
         try
         {
-            & ".\PPMCheckerTool.exe" -i $PSScriptRoot\power_default.etl -o $OutputFilePath
+            & ".\PPMCheckerTool.exe" -i $PSScriptRoot\power_default.etl -o $OutputFilePath -t $TargetCPU
         }catch [Exception]{
             Write-Error $_
             exit;
@@ -88,7 +91,7 @@ process
 
         try
         {
-            & ".\PPMCheckerTool.exe" -i $PSScriptRoot\power_betterbattery.etl -o $OutputFilePath
+            & ".\PPMCheckerTool.exe" -i $PSScriptRoot\power_betterbattery.etl -o $OutputFilePath -t $TargetCPU
         }catch [Exception]{
             Write-Error $_
             exit;
@@ -116,7 +119,7 @@ process
 
         try
         {
-            & ".\PPMCheckerTool.exe" -i $PSScriptRoot\power_betterperf.etl -o $OutputFilePath
+            & ".\PPMCheckerTool.exe" -i $PSScriptRoot\power_betterperf.etl -o $OutputFilePath -t $TargetCPU
         }catch [Exception]{
             Write-Error $_
             exit;
@@ -145,7 +148,7 @@ process
 
         try
         {
-            & ".\PPMCheckerTool.exe" -i $PSScriptRoot\power_bestperf.etl -o $OutputFilePath
+            & ".\PPMCheckerTool.exe" -i $PSScriptRoot\power_bestperf.etl -o $OutputFilePath -t $TargetCPU
         }catch [Exception]{
             Write-Error $_
             exit;
