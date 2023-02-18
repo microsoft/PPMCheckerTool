@@ -1,6 +1,7 @@
 ﻿/*++
 
-Copyright (c) 2022 Microsoft Corporation
+Copyright (c) Microsoft Corporation.
+Licensed under the MIT License.
 
 Module Name:
 
