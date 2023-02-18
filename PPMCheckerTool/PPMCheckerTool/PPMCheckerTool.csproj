@@ -1,0 +1,60 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net4.8</TargetFramework>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+		<Platforms>AnyCPU;x64</Platforms>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<OutputPath>..\bin\Release\PPMCheckerTool\</OutputPath>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+		<OutputPath>..\bin\Release\PPMCheckerTool\</OutputPath>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<OutputPath>..\bin\Debug\PPMCheckerTool\</OutputPath>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+		<OutputPath>..\bin\Debug\PPMCheckerTool\</OutputPath>
+	</PropertyGroup>
+	<PropertyGroup>
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+		<AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+	</PropertyGroup>
+	<PropertyGroup>
+		<Nullable>enable</Nullable>
+		<LangVersion>8.0</LangVersion>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Windows.EventTracing.Processing.All" Version="1.11.109" />
+		<PackageReference Include="System.Xml.XmlDocument" Version="4.3.0" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Common\Common.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="GuidToFriendlyName.csv">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</EmbeddedResource>
+		<EmbeddedResource Include="FriendlyNameToGuid.csv">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</EmbeddedResource>
+		<EmbeddedResource Include="PPMSettingRules.xml">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</EmbeddedResource>
+	</ItemGroup>
+		
+	<ItemGroup>
+		<Reference Include="System.Core" />
+	</ItemGroup>	
+	<ItemGroup>
+		<None Update="@(None)">
+			<Visible Condition="'%(NuGetItemType)' == 'None'">false</Visible>
+		</None>
+	</ItemGroup>
+	<Target Name="CopyYourFolderAfterPublish" AfterTargets="Publish">
+		<Exec Command="XCOPY $(ProjectDir)..\Scripts\*.* $(PublishDir)Scripts\ /S /Y" />
+	</Target>
+</Project>

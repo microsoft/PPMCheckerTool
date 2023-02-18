@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFramework>net4.8</TargetFramework>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+		<ApplicationIcon />
+		<StartupObject />
+		<Platforms>AnyCPU;x64</Platforms>
+	</PropertyGroup>
+	<PropertyGroup>
+		<Nullable>enable</Nullable>
+		<LangVersion>8.0</LangVersion>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Windows.EventTracing.Processing.All" Version="1.11.109" />
+	</ItemGroup>
+	<ItemGroup>
+		<Reference Include="System.Core" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Update="@(None)">
+			<Visible Condition="'%(NuGetItemType)' == 'None'">false</Visible>
+		</None>
+	</ItemGroup>
+</Project>
