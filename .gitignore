@@ -17,3 +17,5 @@ launchSettings.json
 
 PPMCheckerTool/Scripts/*.csv
 PPMCheckerTool/Scripts/*.bak
+
+*PPMSettingRules.xml
