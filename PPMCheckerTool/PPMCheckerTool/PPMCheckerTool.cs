@@ -57,6 +57,10 @@ namespace PPMCheckerTool
         public static Guid GuidLowPower = new Guid("4569e601-272e-4869-bcab-1c6c03d7966f");
         public static Guid GuidEntryLevelPerf = new Guid("a4a61b5f-f42c-4d23-b3ab-5c27df9f0f18");
         public static Guid GuidGameMode = new Guid("d4140c81-ebba-4e60-8561-6918290359cd");
+        public static Guid GuidHeteroDecreaseThreshold = new Guid("f8861c27-95e7-475c-865b-13c0cb3f9d6b");
+        public static Guid GuidHeteroDecreaseThreshold1 = new Guid("f8861c27-95e7-475c-865b-13c0cb3f9d6c");
+        public static Guid GuidHeteroIncreaseThreshold = new Guid("b000397d-9b0b-483d-98c9-692a6060cfbf");
+        public static Guid GuidHeteroIncreaseThreshold1 = new Guid("b000397d-9b0b-483d-98c9-692a6060cfc0");
 
         // Current power scheme and power overlay 
         public static Guid RundownPowerScheme = Guid.Empty;
@@ -94,8 +98,14 @@ namespace PPMCheckerTool
         }
 
         // Data structure that stores the PPM setting values set in the ProfileSettingRundown ETL event
-        // Maps PPM Setting --> ProfileID --> (AC value , DC value)
-        public static Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>> PowSettings = new Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>>();
+        // Maps PPM Setting GUID --> ProfileID --> (AC value , DC value)
+        public static Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>> PowSettings 
+            = new Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>>();
+
+        // Hetero Parking Thresholds (HeteroIncreaseThreshold, HeteroDecreaseThreshold)
+        // Maps PPM Setting GUID --> Concurrency level --> (AC value , DC value)
+        public static Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>> HeteroSettings
+            = new Dictionary<Guid, Dictionary<uint, Tuple<uint?, uint?>>>();
 
         // Data structure that stores the PPM profiles set in the ProfileRundown ETL event
         // Maps ProfileID --> (Name , Name, Guid)
@@ -108,9 +118,14 @@ namespace PPMCheckerTool
         public static Dictionary<string, Guid> FriendlyNameToGuid = new Dictionary<string, Guid>();
         
         // Validation rules per profile and PPM setting
-        // Maps ProfileGuid --> (SettingGuid, SettingValidationRules)
-        public static Dictionary<Guid, List<Tuple<Guid, SettingValidationRules>>> PerProfileValidationRules 
-            = new Dictionary<Guid, List<Tuple<Guid, SettingValidationRules>>>();
+        // Maps ProfileGuid --> SettingGuid --> SettingValidationRules
+        public static Dictionary<Guid, Dictionary<Guid, SettingValidationRules>> PerProfileValidationRules
+            = new Dictionary<Guid, Dictionary<Guid, SettingValidationRules>>();
+
+        // HeteroParking validation rules
+        // Maps Setting --> Concurrency level --> SettingValidationRules
+        public static Dictionary<Guid, Dictionary<uint, SettingValidationRules>> HeteroParkingValidationRules
+            = new Dictionary<Guid, Dictionary<uint, SettingValidationRules>>();
 
         // Final restults string into the output csv file
         public static List<String> Results = new List<String>();
@@ -144,16 +159,6 @@ namespace PPMCheckerTool
             {"EcoQos", "EcoQoS"},
             {"MultimediaQos", "MultimediaQoS"}
         };
-
-        /// <summary>
-        /// Writes the command line usage, arguments and examples to the console
-        /// </summary>
-        static void OutputCommandLineUsage()
-        {
-            Console.Out.WriteLine("Usage: " + System.AppDomain.CurrentDomain.FriendlyName + " -i <trace.etl>  -o <output.csv/txt>  -t <target CPU>");
-            Console.Out.WriteLine("Possible target CPUs: ADL_U, ADL_H, ADL_P");
-            Console.Out.WriteLine("Please confirm if the PPM Rules XML File has the definitions for the target CPU");
-        }
 
         /// <summary>
         /// Main entry point, handles argument parsing
@@ -292,11 +297,11 @@ namespace PPMCheckerTool
                     if (systemMetadata.Result.Processors.Count > 0)
                     {
                         processorModel = systemMetadata.Result.Processors[0].Name;
+
                         // If more than 1 type of core, then it is a hybrid system
                         isHybridSystem = systemMetadata.Result.Processors.GroupBy(x => x.EfficiencyClass).Distinct().Count() > 1 ? true : false;
                     }
                 } catch (InvalidTraceDataException ex) { }
-                
 
                 // Optional : Construct list of relevant generic events
                 List<IGenericEvent> QoSSupportChangedEvents = new List<IGenericEvent>();
@@ -315,7 +320,7 @@ namespace PPMCheckerTool
                             ProfileNames.Add(profileID, new Tuple<string, string, Guid>(profileName, QoSLevelName ?? profileName, guid));
                         }
 
-                        // get all the setting Guids and values
+                        // Read all the setting Guids and values
                         else if (genericEvent.TaskName.Equals("ProfileSettingRundown"))
                         {
                             uint profileID = genericEvent.Fields[0].AsByte;
@@ -325,6 +330,8 @@ namespace PPMCheckerTool
                             Guid guidString = genericEvent.Fields[4].AsGuid;
                             uint valueSize = genericEvent.Fields[5].AsUInt32;
                             uint value = 0;
+                            uint[] heteroThresholds = new uint[4];
+
                             if (valueSize == 1)
                             {
                                 value = genericEvent.Fields[6].AsBinary.ToArray()[0];
@@ -333,41 +340,98 @@ namespace PPMCheckerTool
                             {
                                 value = BitConverter.ToUInt32(genericEvent.Fields[6].AsBinary.ToArray(), 0);
                             }
-
-                            Tuple<uint, Guid> key = new Tuple<uint, Guid>(profileID, guidString);
-                            uint? AC = null;
-                            uint? DC = null;
-
-                            if (!PowSettings.TryGetValue(guidString, out Dictionary<uint, Tuple<uint?, uint?>> settings))
+                            else if (valueSize == 64)
                             {
-                                settings = new Dictionary<uint, Tuple<uint?, uint?>>();
-                                PowSettings[guidString] = settings;
+                                // This setting if for hetero core parking thresholds
+                                for (uint i = 0; i < 4; i++)
+                                {
+                                    value = genericEvent.Fields[6].AsBinary.ToArray()[i];
+                                    heteroThresholds[i] = value;
+                                }
                             }
 
-                            if (!PowSettings[guidString].TryGetValue(profileID, out Tuple<uint?, uint?> values))
+                            if (!IsHeteroCoreParkingSetting(guidString)) 
                             {
-                                if (type == "AC")
-                                    values = new Tuple<uint?, uint?>(value, null);
-                                else
-                                    values = new Tuple<uint?, uint?>(null, value);
+                                // This is not a hetero parking setting
 
-                                PowSettings[guidString].Add(profileID, values);
+                                Tuple<uint, Guid> key = new Tuple<uint, Guid>(profileID, guidString);
+                                uint? AC = null;
+                                uint? DC = null;
+
+                                if (!PowSettings.TryGetValue(guidString, out Dictionary<uint, Tuple<uint?, uint?>> settings))
+                                {
+                                    settings = new Dictionary<uint, Tuple<uint?, uint?>>();
+                                    PowSettings[guidString] = settings;
+                                }
+
+                                if (!PowSettings[guidString].TryGetValue(profileID, out Tuple<uint?, uint?> values))
+                                {
+                                    if (type == "AC")
+                                        values = new Tuple<uint?, uint?>(value, null);
+                                    else
+                                        values = new Tuple<uint?, uint?>(null, value);
+                                    PowSettings[guidString].Add(profileID, values);
+                                }
+                                else
+                                {
+                                    if (type == "AC")
+                                    {
+                                        AC = value;
+                                        DC = PowSettings[guidString][profileID].Item2;
+                                    }
+                                    else
+                                    {
+                                        AC = PowSettings[guidString][profileID].Item1;
+                                        DC = value;
+                                    }
+                                    //Replace old tuple with new tuple with both values of AC and DC
+                                    PowSettings[guidString].Remove(profileID);
+                                    PowSettings[guidString].Add(profileID, new Tuple<uint?, uint?>(AC, DC));
+                                }
                             }
                             else
                             {
-                                if (type == "AC")
+                                // Hetero Parking setting
+                                if (!HeteroSettings.TryGetValue(guidString, out Dictionary<uint, Tuple<uint?, uint?>> heteroParkingThresholds))
                                 {
-                                    AC = value;
-                                    DC = PowSettings[guidString][profileID].Item2;
+                                    heteroParkingThresholds = new Dictionary<uint, Tuple<uint?, uint?>>();
+                                    HeteroSettings[guidString] = heteroParkingThresholds;
                                 }
-                                else
+
+                                for (uint concurrency_level = 0; concurrency_level < 4; concurrency_level ++)
                                 {
-                                    AC = PowSettings[guidString][profileID].Item1;
-                                    DC = value;
+                                    uint threashold = heteroThresholds[concurrency_level];
+                                    uint concurrency = concurrency_level + 1;
+
+                                    if (!HeteroSettings[guidString].TryGetValue(concurrency, out Tuple<uint?, uint?> acdcValues))
+                                    {
+                                        if (type == "AC")
+                                            acdcValues = new Tuple<uint?, uint?>(threashold, null);
+                                        else
+                                            acdcValues = new Tuple<uint?, uint?>(null, threashold);
+
+                                        HeteroSettings[guidString].Add(concurrency, acdcValues);
+                                    }
+                                    else
+                                    {
+                                        uint? ac = null;
+                                        uint? dc = null;
+
+                                        if (type == "AC")
+                                        {
+                                            ac = threashold;
+                                            dc = HeteroSettings[guidString][concurrency].Item2;
+                                        }
+                                        else
+                                        {
+                                            ac = HeteroSettings[guidString][concurrency].Item1;
+                                            dc = threashold;
+                                        }
+                                        //Replace old tuple with new tuple with both values of AC and DC
+                                        HeteroSettings[guidString].Remove(concurrency);
+                                        HeteroSettings[guidString].Add(concurrency, new Tuple<uint?, uint?>(ac, dc));
+                                    }
                                 }
-                                //Replace old tuple with new tuple with both values of AC and DC
-                                PowSettings[guidString].Remove(profileID);
-                                PowSettings[guidString].Add(profileID, new Tuple<uint?, uint?>(AC, DC));
                             }
                         }
                     }
@@ -429,8 +493,11 @@ namespace PPMCheckerTool
                 // Read the validation rules from the XML file
                 ReadValidationRules(xmlRulesDoc, targetCPU);
 
-                // Validate PPM settings
-                ValidatePPMSettings();
+                //Validate PPM settings
+                ValidateNonHeteroPPMSettings();
+
+                // Validate Non-hetero PPM settings
+                ValidateHeteroPPMSettings();
 
                 // Write the output results
                 WriteOutput(Results, outputPath);
@@ -490,105 +557,17 @@ namespace PPMCheckerTool
                                 Guid settingGuid;
                                 FriendlyNameToGuid.TryGetValue(SettingName, out settingGuid);
 
-                                SettingValidationRules settingValidationRules = new SettingValidationRules();
-
-                                // Value in AC mode
-                                if (settingNode["AcValue"] != null)
+                                if (IsHeteroCoreParkingSetting(settingGuid))
                                 {
-                                    settingValidationRules.acValue = Convert.ToUInt32(settingNode["AcValue"].InnerText);
+                                    // Hetero Core parking setting
+                                    ReadHeteroParkingSettingRules(settingGuid, settingNode);
                                 }
-
-                                // Min bound in AC mode
-                                if (settingNode["AcMinValue"] != null)
+                                else
                                 {
-                                    settingValidationRules.acMinValue = Convert.ToUInt32(settingNode["AcMinValue"].InnerText);
+                                    // Non-Hetero Core parking setting
+                                    ReadNonHeteroParkingSettingRules(profileGuid, settingGuid, settingNode);
                                 }
-
-                                // Max bound in AC mode
-                                if (settingNode["AcMaxValue"] != null)
-                                {
-                                    settingValidationRules.acMaxValue = Convert.ToUInt32(settingNode["AcMaxValue"].InnerText);
-                                }
-
-                                // Min Distance to profile in AC mode
-                                if (settingNode["AcMinDistanceToProfile"] != null)
-                                {
-                                    if (settingNode["AcMinDistanceToProfile"]["Profile"] != null && settingNode["AcMinDistanceToProfile"]["Distance"] != null)
-                                    {
-                                        String refProfileName = settingNode["AcMinDistanceToProfile"]["Profile"].InnerText.Replace(" ", "");
-                                        Guid refProfileGuid;
-                                        FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
-
-                                        int distance = Convert.ToInt32(settingNode["AcMinDistanceToProfile"]["Distance"].InnerText);
-                                        settingValidationRules.acMinDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
-                                    }
-                                }
-
-                                // Max Distance to profile in AC mode
-                                if (settingNode["AcMaxDistanceToProfile"] != null)
-                                {
-                                    if (settingNode["AcMaxDistanceToProfile"]["Profile"] != null && settingNode["AcMaxDistanceToProfile"]["Distance"] != null)
-                                    {
-                                        String refProfileName = settingNode["AcMaxDistanceToProfile"]["Profile"].InnerText.Replace(" ", "");
-                                        Guid refProfileGuid;
-                                        FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
-
-                                        int distance = Convert.ToInt32(settingNode["AcMaxDistanceToProfile"]["Distance"].InnerText);
-                                        settingValidationRules.acMaxDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
-                                    }
-                                }
-
-                                // Value in DC mode
-                                if (settingNode["DcValue"] != null)
-                                {
-                                    settingValidationRules.dcValue = Convert.ToUInt32(settingNode["DcValue"].InnerText);
-                                }
-
-                                // Min bound in DC mode
-                                if (settingNode["DcMinValue"] != null)
-                                {
-                                    settingValidationRules.dcMinValue = Convert.ToUInt32(settingNode["DcMinValue"].InnerText);
-                                }
-
-                                // Max bound in DC mode
-                                if (settingNode["DcMaxValue"] != null)
-                                {
-                                    settingValidationRules.dcMaxValue = Convert.ToUInt32(settingNode["DcMaxValue"].InnerText);
-                                }
-
-                                // Min Distance to profile in DC mode
-                                if (settingNode["DcMinDistanceToProfile"] != null)
-                                {
-                                    if (settingNode["DcMinDistanceToProfile"]["Profile"] != null && settingNode["DcMinDistanceToProfile"]["Distance"] != null)
-                                    {
-                                        String refProfileName = settingNode["DcMinDistanceToProfile"]["Profile"].InnerText.Replace(" ", "");
-                                        Guid refProfileGuid;
-                                        FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
-
-                                        int distance = Convert.ToInt32(settingNode["DcMinDistanceToProfile"]["Distance"].InnerText);
-                                        settingValidationRules.dcMinDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
-                                    }
-                                }
-
-                                // Max Distance to profile in DC mode
-                                if (settingNode["DcMaxDistanceToProfile"] != null)
-                                {
-                                    if (settingNode["DcMaxDistanceToProfile"]["Profile"] != null && settingNode["DcMaxDistanceToProfile"]["Distance"] != null)
-                                    {
-                                        String refProfileName = settingNode["DcMaxDistanceToProfile"]["Profile"].InnerText.Replace(" ", "");
-                                        Guid refProfileGuid;
-                                        FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
-
-                                        int distance = Convert.ToInt32(settingNode["DcMaxDistanceToProfile"]["Distance"].InnerText);
-                                        settingValidationRules.dcMaxDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
-                                    }
-                                }
-
-                                listPerSettingRules.Add(new Tuple<Guid, SettingValidationRules>(settingGuid, settingValidationRules));
                             }
-
-                            // Add a new validation rule
-                            PerProfileValidationRules.Add(profileGuid, listPerSettingRules);
                         }
                     }
                 }
@@ -597,11 +576,11 @@ namespace PPMCheckerTool
         }
 
         /// <summary>
-        /// This method validates the PPM settings against the rules specified in the XML file:
+        /// This method validates the PPM settings (Non Hetero) against the rules specified in the XML file:
         /// (1) For each profile, all the PPM settings set in the XML rules file are checked in (we consider the order of inheritance of the profiles)
         /// (2) The rules for setting's Min/Max/Absolute values are satisfied
         /// </summary>
-        public static void ValidatePPMSettings()
+        public static void ValidateNonHeteroPPMSettings()
         {
             foreach (DictionaryEntry profile in OrderedProfileHierarchy)
             {
@@ -617,8 +596,8 @@ namespace PPMCheckerTool
                 // Iterate over the PPM settings to validate for this profile
                 foreach (var settingRules in PerProfileValidationRules[profileGuid])
                 {
-                    Guid settingGuid = settingRules.Item1;
-                    SettingValidationRules rules = settingRules.Item2;
+                    Guid settingGuid = settingRules.Key;
+                    SettingValidationRules rules = settingRules.Value;
 
                     string settingName;
                     uint? acValue = null;
@@ -844,6 +823,135 @@ namespace PPMCheckerTool
             }
         }
 
+        /// <summary>
+        /// This method validates the Hetero Core parking thresholds (HeteroIncreaseThreshold, HeteroDecreaseThreshold) against the rules specified in the XML file:
+        /// </summary>
+
+        public static void ValidateHeteroPPMSettings()
+        {
+            // Iterate Over all the rules
+            foreach (var settingRules in HeteroParkingValidationRules)
+            {
+                Guid settingGuid = settingRules.Key;
+                string settingName;
+
+                // Get the friendly name of the PPM setting
+                GuidToFriendlyName.TryGetValue(settingGuid, out settingName);
+
+                // Validate that the setting is set for any profile 
+                if (!HeteroSettings.ContainsKey(settingGuid))
+                {
+                    Results.Add($"ERROR , {"Profile_Default"} , {settingName} , AC/DC , NULL , Setting is not set in the PPKG.");
+                    continue;
+                }
+
+                foreach (var concurrencyRules in settingRules.Value)
+                {
+                    // Get the concurrency level and its associated rules
+                    uint concurrencyLevel = concurrencyRules.Key;
+                    SettingValidationRules rules = concurrencyRules.Value;
+
+                    if (!HeteroSettings[settingGuid].ContainsKey(concurrencyLevel))
+                    {
+                        Results.Add($"ERROR , {"Profile_Default"} , {settingName} , AC/DC , NULL , Concurrency level {concurrencyLevel} not set.");
+                        continue;
+                    }
+
+                    uint? ppkgThreholdAc = HeteroSettings[settingGuid][concurrencyLevel].Item1;
+                    uint? ppkgThreholdDc = HeteroSettings[settingGuid][concurrencyLevel].Item2;
+
+                    if (rules.acValue.HasValue) 
+                    {
+                        if(!ppkgThreholdAc.HasValue)
+                        {
+                            Results.Add($"ERROR , {"Profile_Default"} , {settingName} , AC , NULL , Concurrency level {concurrencyLevel} not set. Value should be = {rules.acValue.Value}");
+                        }
+                        else
+                        {
+                            if (ppkgThreholdAc.Value != rules.acValue.Value)
+                            {
+                                Results.Add($"ERROR , {"Profile_Default"} , {settingName}, AC , {ppkgThreholdAc.Value} , Value of oncurrency level {concurrencyLevel} should be = {rules.acValue.Value}");
+                            }
+                        }
+                    }
+
+                    if (rules.acMinValue.HasValue)
+                    {
+                        if (!ppkgThreholdAc.HasValue)
+                        {
+                            Results.Add($"ERROR , {"Profile_Default"} , {settingName} , AC , NULL , Concurrency level {concurrencyLevel} not set. Value should be >= {rules.acMinValue.Value}");
+                        }
+                        else
+                        {
+                            if (ppkgThreholdAc.Value < rules.acMinValue.Value)
+                            {
+                                Results.Add($"ERROR , {"Profile_Default"} , {settingName}, AC , {ppkgThreholdAc.Value} , Value of oncurrency level {concurrencyLevel} should be >= {rules.acMinValue.Value}");
+                            }
+                        }
+                    }
+
+                    if (rules.acMaxValue.HasValue)
+                    {
+                        if (!ppkgThreholdAc.HasValue)
+                        {
+                            Results.Add($"ERROR , {"Profile_Default"} , {settingName} , AC , NULL , Concurrency level {concurrencyLevel} not set. Value should be <= {rules.acMaxValue.Value}");
+                        }
+                        else
+                        {
+                            if (ppkgThreholdAc.Value > rules.acMaxValue.Value)
+                            {
+                                Results.Add($"ERROR , {"Profile_Default"} , {settingName} , AC , {ppkgThreholdAc.Value} , Value of oncurrency level {concurrencyLevel} should be <= {rules.acMaxValue.Value}");
+                            }
+                        }
+                    }
+
+                    if (rules.dcValue.HasValue)
+                    {
+                        if (!ppkgThreholdDc.HasValue)
+                        {
+                            Results.Add($"ERROR , {"Profile_Default"} , {settingName} , DC , NULL , Concurrency level {concurrencyLevel} not set. Value should be = {rules.dcValue.Value}");
+                        }
+                        else
+                        {
+                            if (ppkgThreholdDc.Value != rules.dcValue.Value)
+                            {
+                                Results.Add($"ERROR , {"Profile_Default"} , {settingName} , DC , {ppkgThreholdDc.Value} , Value of oncurrency level {concurrencyLevel} should be = {rules.dcValue.Value}");
+                            }
+                        }
+                    }
+
+                    if (rules.dcMinValue.HasValue)
+                    {
+                        if (!ppkgThreholdDc.HasValue)
+                        {
+                            Results.Add($"ERROR , {"Profile_Default"} , {settingName} , DC , NULL , Concurrency level {concurrencyLevel} not set. Value should be >= {rules.dcMinValue.Value}");
+                        }
+                        else
+                        {
+                            if (ppkgThreholdDc.Value < rules.dcMinValue.Value)
+                            {
+                                Results.Add($"ERROR , {"Profile_Default"} , {settingName} , DC , {ppkgThreholdDc.Value} , Value of oncurrency level {concurrencyLevel} should be >= {rules.dcMinValue.Value}");
+                            }
+                        }
+                    }
+
+                    if (rules.dcMaxValue.HasValue)
+                    {
+                        if (!ppkgThreholdDc.HasValue)
+                        {
+                            Results.Add($"ERROR , {"Profile_Default"} , {settingName} , DC , NULL , Concurrency level {concurrencyLevel} not set. Value should be <= {rules.dcMaxValue.Value}");
+                        }
+                        else
+                        {
+                            if (ppkgThreholdDc.Value > rules.dcMaxValue.Value)
+                            {
+                                Results.Add($"ERROR , {"Profile_Default"} , {settingName} , DC , {ppkgThreholdDc.Value} , Value of oncurrency level {concurrencyLevel} should be <= {rules.dcMaxValue.Value}");
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         /// <summary>
         /// Given a PPM setting and a PPM profile, this method retrieves the first parent profile for which the PPM setting is set 
@@ -984,6 +1092,294 @@ namespace PPMCheckerTool
             }
 
             File.AppendAllText(outputPath, output.ToString());
+        }
+
+        /// <summary>
+        /// Writes the command line usage, arguments and examples to the console
+        /// </summary>
+        static void OutputCommandLineUsage()
+        {
+            Console.Out.WriteLine("Usage: " + System.AppDomain.CurrentDomain.FriendlyName + " -i <trace.etl>  -o <output.csv/txt>  -t <target CPU>");
+            Console.Out.WriteLine("Possible target CPUs: ADL_U, ADL_H, ADL_P");
+            Console.Out.WriteLine("Please confirm if the PPM Rules XML File has the definitions for the target CPU");
+        }
+
+        /// <summary>
+        /// Helper function 
+        /// Create a vector and put in it the numbers from a string that has a sequence of them 
+        /// </summary>
+        /// <param name="numbersString"> String of numbers</param>
+        /// <returns> a vector of numbers or NULL </returns>
+        static uint[] GetNumbersFromString(string numbersString)
+        {
+            uint[] numbers = null;
+            string[] numberStrings = numbersString.Trim().Split(' ');
+            numbers = new uint[numberStrings.Length];
+
+            for (int i = 0; i < numberStrings.Length; i++)
+            {
+                if (int.TryParse(numberStrings[i], out int parsedNumber))
+                {
+                    numbers[i] = (uint)parsedNumber;
+                }
+            }
+
+            return numbers;
+        }
+
+        /// <summary>
+        /// Helper function 
+        /// Verify if a setting is among the heterosexual core parking settings 
+        /// </summary>
+        /// <param name="settingGuid"> GUID of the setting</param>
+        /// <returns> True is the setting is a hetero core parking setting </returns>
+
+        static bool IsHeteroCoreParkingSetting(Guid settingGuid)
+        {
+            return (settingGuid == GuidHeteroDecreaseThreshold ||
+                    settingGuid == GuidHeteroDecreaseThreshold1 ||
+                    settingGuid == GuidHeteroIncreaseThreshold ||
+                    settingGuid == GuidHeteroIncreaseThreshold1);
+        }
+
+        /// <summary>
+        /// Read from the XML file the validation rules of a given hetero core parking setting  
+        /// </summary>
+        /// <param name="settingGuid"> GUID of the setting</param>
+        /// <param name="settingNode"> Node of the setting in the XML file</param>
+        static void ReadHeteroParkingSettingRules(Guid settingGuid, XmlNode settingNode)
+        {
+            Dictionary<uint, SettingValidationRules> settingRulesByConcurrencyLevel = new Dictionary<uint, SettingValidationRules>();
+
+            for (uint concurrency = 1; concurrency <= 4; concurrency++)
+            {
+                SettingValidationRules rules = new SettingValidationRules();
+                settingRulesByConcurrencyLevel.Add(concurrency, rules);
+            }
+
+            // Value in AC mode
+            if (settingNode["AcValue"] != null)
+            {
+                uint[] threasholds = GetNumbersFromString(settingNode["AcValue"].InnerText);
+                if (threasholds != null)
+                {
+                    uint concurrency = 0;
+                    foreach (uint thd in threasholds)
+                    {
+                        concurrency++;
+                        var rules = settingRulesByConcurrencyLevel[concurrency];
+                        rules.acValue = thd;
+                        settingRulesByConcurrencyLevel[concurrency] = rules;
+                    }
+                }
+            }
+
+            // Min bound in AC mode
+            if (settingNode["AcMinValue"] != null)
+            {
+                uint[] threasholds = GetNumbersFromString(settingNode["AcMinValue"].InnerText);
+                if (threasholds != null)
+                {
+                    uint concurrency = 0;
+                    foreach (uint thd in threasholds)
+                    {
+                        concurrency++;
+                        var rules = settingRulesByConcurrencyLevel[concurrency];
+                        rules.acMinValue = thd;
+                        settingRulesByConcurrencyLevel[concurrency] = rules;
+                    }
+                }
+            }
+
+            // Max bound in AC mode
+            if (settingNode["AcMaxValue"] != null)
+            {
+                uint[] threasholds = GetNumbersFromString(settingNode["AcMaxValue"].InnerText);
+                if (threasholds != null)
+                {
+                    uint concurrency = 0;
+                    foreach (uint thd in threasholds)
+                    {
+                        concurrency++;
+                        var rules = settingRulesByConcurrencyLevel[concurrency];
+                        rules.acMaxValue = thd;
+                        settingRulesByConcurrencyLevel[concurrency] = rules;
+                    }
+                }
+            }
+
+            // Value in DC mode
+            if (settingNode["DcValue"] != null)
+            {
+                uint[] threasholds = GetNumbersFromString(settingNode["DcValue"].InnerText);
+                if (threasholds != null)
+                {
+                    uint concurrency = 0;
+                    foreach (uint thd in threasholds)
+                    {
+                        concurrency++;
+                        var rules = settingRulesByConcurrencyLevel[concurrency];
+                        rules.dcValue = thd;
+                        settingRulesByConcurrencyLevel[concurrency] = rules;
+                    }
+                }
+            }
+
+            // Min bound in DC mode
+            if (settingNode["DcMinValue"] != null)
+            {
+                uint[] threasholds = GetNumbersFromString(settingNode["DcMinValue"].InnerText);
+                if (threasholds != null)
+                {
+                    uint concurrency = 0;
+                    foreach (uint thd in threasholds)
+                    {
+                        concurrency++;
+                        var rules = settingRulesByConcurrencyLevel[concurrency];
+                        rules.dcMinValue = thd;
+                        settingRulesByConcurrencyLevel[concurrency] = rules;
+                    }
+                }
+            }
+
+            // Max bound in DC mode
+            if (settingNode["DcMaxValue"] != null)
+            {
+                uint[] threasholds = GetNumbersFromString(settingNode["DcMaxValue"].InnerText);
+                if (threasholds != null)
+                {
+                    uint concurrency = 0;
+                    foreach (uint thd in threasholds)
+                    {
+                        concurrency++;
+                        var rules = settingRulesByConcurrencyLevel[concurrency];
+                        rules.dcMaxValue = thd;
+                        settingRulesByConcurrencyLevel[concurrency] = rules;
+                    }
+                }
+            }
+
+            // Add the hetero parking validation rules 
+            HeteroParkingValidationRules.Add(settingGuid, settingRulesByConcurrencyLevel);
+        }
+
+        /// <summary>
+        /// Read from the XML file the validation rules of a given Non-hetero core parking setting  
+        /// </summary>
+        /// <param name="settingGuid"> GUID of the setting</param>
+        /// <param name="settingNode"> Node of the setting in the XML file</param>
+
+        static void ReadNonHeteroParkingSettingRules(Guid profileGuid, Guid settingGuid, XmlNode settingNode)
+        {
+            SettingValidationRules settingValidationRules = new SettingValidationRules();
+
+            if (settingNode["AcValue"] != null)
+            {
+                settingValidationRules.acValue = Convert.ToUInt32(settingNode["AcValue"].InnerText);
+            }
+
+            // Min bound in AC mode
+            if (settingNode["AcMinValue"] != null)
+            {
+                settingValidationRules.acMinValue = Convert.ToUInt32(settingNode["AcMinValue"].InnerText);
+            }
+
+            // Max bound in AC mode
+            if (settingNode["AcMaxValue"] != null)
+            {
+                settingValidationRules.acMaxValue = Convert.ToUInt32(settingNode["AcMaxValue"].InnerText);
+            }
+
+            // Min Distance to profile in AC mode
+            if (settingNode["AcMinDistanceToProfile"] != null)
+            {
+                if (settingNode["AcMinDistanceToProfile"]["Profile"] != null && settingNode["AcMinDistanceToProfile"]["Distance"] != null)
+                {
+                    String refProfileName = settingNode["AcMinDistanceToProfile"]["Profile"].InnerText.Replace(" ", "");
+                    Guid refProfileGuid;
+                    FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
+
+                    int distance = Convert.ToInt32(settingNode["AcMinDistanceToProfile"]["Distance"].InnerText);
+                    settingValidationRules.acMinDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
+                }
+            }
+
+            // Max Distance to profile in AC mode
+            if (settingNode["AcMaxDistanceToProfile"] != null)
+            {
+                if (settingNode["AcMaxDistanceToProfile"]["Profile"] != null && settingNode["AcMaxDistanceToProfile"]["Distance"] != null)
+                {
+                    String refProfileName = settingNode["AcMaxDistanceToProfile"]["Profile"].InnerText.Replace(" ", "");
+                    Guid refProfileGuid;
+                    FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
+
+                    int distance = Convert.ToInt32(settingNode["AcMaxDistanceToProfile"]["Distance"].InnerText);
+                    settingValidationRules.acMaxDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
+                }
+            }
+
+            // Value in DC mode
+            if (settingNode["DcValue"] != null)
+            {
+                settingValidationRules.dcValue = Convert.ToUInt32(settingNode["DcValue"].InnerText);
+            }
+
+            // Min bound in DC mode
+            if (settingNode["DcMinValue"] != null)
+            {
+                settingValidationRules.dcMinValue = Convert.ToUInt32(settingNode["DcMinValue"].InnerText);
+            }
+
+            // Max bound in DC mode
+            if (settingNode["DcMaxValue"] != null)
+            {
+                settingValidationRules.dcMaxValue = Convert.ToUInt32(settingNode["DcMaxValue"].InnerText);
+            }
+
+            // Min Distance to profile in DC mode
+            if (settingNode["DcMinDistanceToProfile"] != null)
+            {
+                if (settingNode["DcMinDistanceToProfile"]["Profile"] != null && settingNode["DcMinDistanceToProfile"]["Distance"] != null)
+                {
+                    String refProfileName = settingNode["DcMinDistanceToProfile"]["Profile"].InnerText.Replace(" ", "");
+                    Guid refProfileGuid;
+                    FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
+
+                    int distance = Convert.ToInt32(settingNode["DcMinDistanceToProfile"]["Distance"].InnerText);
+                    settingValidationRules.dcMinDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
+                }
+            }
+
+            // Max Distance to profile in DC mode
+            if (settingNode["DcMaxDistanceToProfile"] != null)
+            {
+                if (settingNode["DcMaxDistanceToProfile"]["Profile"] != null && settingNode["DcMaxDistanceToProfile"]["Distance"] != null)
+                {
+                    String refProfileName = settingNode["DcMaxDistanceToProfile"]["Profile"].InnerText.Replace(" ", "");
+                    Guid refProfileGuid;
+                    FriendlyNameToGuid.TryGetValue(refProfileName, out refProfileGuid);
+
+                    int distance = Convert.ToInt32(settingNode["DcMaxDistanceToProfile"]["Distance"].InnerText);
+                    settingValidationRules.dcMaxDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
+                }
+            }
+
+            // Add the validation rules 
+            if (!PerProfileValidationRules.ContainsKey(profileGuid))
+            {
+                PerProfileValidationRules.Add(profileGuid, new Dictionary<Guid, SettingValidationRules> { { settingGuid, settingValidationRules } });
+            }
+            else
+            {
+                if (!PerProfileValidationRules[profileGuid].ContainsKey(settingGuid))
+                {
+                    PerProfileValidationRules[profileGuid].Add(settingGuid, settingValidationRules);
+                }
+                else
+                {
+                    PerProfileValidationRules[profileGuid][settingGuid] = settingValidationRules;
+                }
+            }
         }
     }
 }
