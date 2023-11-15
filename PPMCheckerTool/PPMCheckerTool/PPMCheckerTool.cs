@@ -400,7 +400,7 @@ namespace PPMCheckerTool
 
                                 for (uint concurrency_level = 1; concurrency_level <= 4; concurrency_level ++)
                                 {
-                                    uint threshold = heteroThresholds[concurrency_level];
+                                    uint threshold = heteroThresholds[concurrency_level - 1];
 
                                     if (!HeteroSettings[guidString].TryGetValue(concurrency_level, out Tuple<uint?, uint?> acdcValues))
                                     {
