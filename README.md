@@ -5,6 +5,11 @@ Configuring the PPM settings is a complex process and requires area expertise an
 
 To help this process, we built a tool that the silicon vendors/OEMs can deploy to validate the PPM settings on their new products.
 
+# Changelog
+V1 - Early 2023
+V1.1 - 11/15/2023 - Added MTL & Hetero Core parking rules support
+
+
 > The Architecture
 > ![image](https://user-images.githubusercontent.com/121056171/210118102-93b0a087-0562-4b1d-baa3-0ef5aae138ce.png)
 
