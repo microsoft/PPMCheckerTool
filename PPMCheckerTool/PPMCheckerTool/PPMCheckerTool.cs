@@ -398,19 +398,18 @@ namespace PPMCheckerTool
                                     HeteroSettings[guidString] = heteroParkingThresholds;
                                 }
 
-                                for (uint concurrency_level = 0; concurrency_level < 4; concurrency_level ++)
+                                for (uint concurrency_level = 1; concurrency_level <= 4; concurrency_level ++)
                                 {
-                                    uint threashold = heteroThresholds[concurrency_level];
-                                    uint concurrency = concurrency_level + 1;
+                                    uint threshold = heteroThresholds[concurrency_level];
 
-                                    if (!HeteroSettings[guidString].TryGetValue(concurrency, out Tuple<uint?, uint?> acdcValues))
+                                    if (!HeteroSettings[guidString].TryGetValue(concurrency_level, out Tuple<uint?, uint?> acdcValues))
                                     {
                                         if (type == "AC")
-                                            acdcValues = new Tuple<uint?, uint?>(threashold, null);
+                                            acdcValues = new Tuple<uint?, uint?>(threshold, null);
                                         else
-                                            acdcValues = new Tuple<uint?, uint?>(null, threashold);
+                                            acdcValues = new Tuple<uint?, uint?>(null, threshold);
 
-                                        HeteroSettings[guidString].Add(concurrency, acdcValues);
+                                        HeteroSettings[guidString].Add(concurrency_level, acdcValues);
                                     }
                                     else
                                     {
@@ -419,17 +418,17 @@ namespace PPMCheckerTool
 
                                         if (type == "AC")
                                         {
-                                            ac = threashold;
-                                            dc = HeteroSettings[guidString][concurrency].Item2;
+                                            ac = threshold;
+                                            dc = HeteroSettings[guidString][concurrency_level].Item2;
                                         }
                                         else
                                         {
-                                            ac = HeteroSettings[guidString][concurrency].Item1;
-                                            dc = threashold;
+                                            ac = HeteroSettings[guidString][concurrency_level].Item1;
+                                            dc = threshold;
                                         }
                                         //Replace old tuple with new tuple with both values of AC and DC
-                                        HeteroSettings[guidString].Remove(concurrency);
-                                        HeteroSettings[guidString].Add(concurrency, new Tuple<uint?, uint?>(ac, dc));
+                                        HeteroSettings[guidString].Remove(concurrency_level);
+                                        HeteroSettings[guidString].Add(concurrency_level, new Tuple<uint?, uint?>(ac, dc));
                                     }
                                 }
                             }
@@ -1100,7 +1099,7 @@ namespace PPMCheckerTool
         static void OutputCommandLineUsage()
         {
             Console.Out.WriteLine("Usage: " + System.AppDomain.CurrentDomain.FriendlyName + " -i <trace.etl>  -o <output.csv/txt>  -t <target CPU>");
-            Console.Out.WriteLine("Possible target CPUs: ADL_U, ADL_H, ADL_P");
+            Console.Out.WriteLine("Possible target CPUs: ADL_U, ADL_H, ADL_P, RPL_U, RPL_P, MTL_H, MTL_U ...");
             Console.Out.WriteLine("Please confirm if the PPM Rules XML File has the definitions for the target CPU");
         }
 
