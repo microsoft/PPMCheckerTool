@@ -73,6 +73,9 @@ namespace PPMCheckerTool
         // Default Overlay Scheme name
         public const String DefaultOverlayScheme = "OEM Default Overlay Scheme";
 
+        // Fmax
+        public const uint FMAX = 100000;
+
         // Validation rules associated with each PPM setting
         public struct SettingValidationRules
         {
@@ -668,10 +671,11 @@ namespace PPMCheckerTool
                     else
                     {
                         // Validate against the validation rules 
-                        uint acEffectiveValue = acValue.Value;
-                        if (IsFrequencyCapSetting(settingGuid))
+
+                        // Case of Fmax = 0
+                        if (IsFrequencyCapSetting(settingGuid) && acValue.Value == 0)
                         {
-                            acEffectiveValue = uint.MaxValue;
+                            acValue = FMAX;
                         }
 
                         // Rule "acValue"
@@ -686,7 +690,7 @@ namespace PPMCheckerTool
                         // Rule "acMinValue"
                         if (rules.acMinValue.HasValue)
                         {
-                            if (acEffectiveValue < rules.acMinValue.Value)
+                            if (acValue.Value < rules.acMinValue.Value)
                             {
                                 Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Setting should be >= {rules.acMinValue.Value}");
                             }
@@ -695,7 +699,7 @@ namespace PPMCheckerTool
                         // Rule "acMaxValue"
                         if (rules.acMaxValue.HasValue)
                         {
-                            if (acEffectiveValue > rules.acMaxValue.Value)
+                            if (acValue.Value > rules.acMaxValue.Value)
                             {
                                 Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Setting should be  <= {rules.acMaxValue.Value}");
                             }
@@ -712,7 +716,7 @@ namespace PPMCheckerTool
                             int distance = rules.acMinDistanceToSetting.Item2;
 
                             // Calculate the distance to the target setting
-                            int distanceToSetting = CalculateDistanceToSetting(acEffectiveValue, targetSettingGuid, profileGuid, true);
+                            int distanceToSetting = CalculateDistanceToSetting(acValue.Value, targetSettingGuid, profileGuid, true);
                             if (distanceToSetting == Int32.MinValue)
                             {
                                 Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to setting {targetSettingName} should be >= {distance}. Setting {targetSettingName} was not set");
@@ -720,7 +724,7 @@ namespace PPMCheckerTool
                             }
                             else if (distanceToSetting < distance)
                             {
-                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to setting {targetSettingName} should be >= {distance}. Actual distance = {distanceToSetting}");
+                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to setting {targetSettingName} should be >= {distance}.");
                             }
                         }
 
@@ -736,7 +740,7 @@ namespace PPMCheckerTool
                             int distance = rules.acMinDistanceToProfile.Item2;
 
                             // Calculate the distance to reference profile
-                            int distanceToRefProfile = CalculateDistanceToProfile(settingGuid, acEffectiveValue, refProfileGuid, true);
+                            int distanceToRefProfile = CalculateDistanceToProfile(settingGuid, acValue.Value, refProfileGuid, true);
 
                             if (distanceToRefProfile == Int32.MinValue)
                             {
@@ -744,7 +748,7 @@ namespace PPMCheckerTool
                             }
                             else if (distanceToRefProfile < distance)
                             {
-                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to profile {refProfileName} should be >= {distance}. Actual distance = {distanceToRefProfile}");
+                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to profile {refProfileName} should be >= {distance}.");
                             }
                         }
 
@@ -757,7 +761,7 @@ namespace PPMCheckerTool
                             int distance = rules.acMaxDistanceToSetting.Item2;
 
                             // Calculate the distance to the target setting
-                            int distanceToSetting = CalculateDistanceToSetting(acEffectiveValue, targetSettingGuid, profileGuid, true);
+                            int distanceToSetting = CalculateDistanceToSetting(acValue.Value, targetSettingGuid, profileGuid, true);
                             if (distanceToSetting == Int32.MinValue)
                             {
                                 Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to setting {targetSettingName} should be <= {distance}. Setting {targetSettingName} was not set");
@@ -765,7 +769,7 @@ namespace PPMCheckerTool
                             }
                             else if (distanceToSetting > distance)
                             {
-                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to setting {targetSettingName} should be <= {distance}. Actual distance = {distanceToSetting}");
+                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to setting {targetSettingName} should be <= {distance}.");
                             }
                         }
 
@@ -781,7 +785,7 @@ namespace PPMCheckerTool
                             int distance = rules.acMaxDistanceToProfile.Item2;
 
                             // Calculate the distance to reference profile
-                            int distanceToRefProfile = CalculateDistanceToProfile(settingGuid, acEffectiveValue, refProfileGuid, true);
+                            int distanceToRefProfile = CalculateDistanceToProfile(settingGuid, acValue.Value, refProfileGuid, true);
 
                             if (distanceToRefProfile == Int32.MinValue)
                             {
@@ -789,7 +793,7 @@ namespace PPMCheckerTool
                             }
                             else if (distanceToRefProfile > distance)
                             {
-                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to profile {refProfileName} should be <= {distance}. Actual distance = {distanceToRefProfile}");
+                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to profile {refProfileName} should be <= {distance}.");
                             }
                         }
                     }
@@ -803,10 +807,11 @@ namespace PPMCheckerTool
                     else
                     {
                         // Validate against the validation rules 
-                        uint dcEffectiveValue = dcValue.Value;
-                        if (IsFrequencyCapSetting(settingGuid))
+
+                        // Case of Fmax = 0
+                        if (IsFrequencyCapSetting(settingGuid) && dcValue.Value == 0)
                         {
-                            dcEffectiveValue = uint.MaxValue;
+                            dcValue = FMAX;
                         }
 
                         // Rule "dcValue"
@@ -821,7 +826,7 @@ namespace PPMCheckerTool
                         // Rule "dcMinValue"
                         if (rules.dcMinValue.HasValue)
                         {
-                            if (dcEffectiveValue < rules.dcMinValue.Value)
+                            if (dcValue.Value < rules.dcMinValue.Value)
                             {
                                 Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Setting should be >= {rules.dcMinValue.Value}");
                             }
@@ -830,7 +835,7 @@ namespace PPMCheckerTool
                         // Rule "dcMaxValue"
                         if (rules.dcMaxValue.HasValue)
                         {
-                            if (dcEffectiveValue > rules.dcMaxValue.Value)
+                            if (dcValue.Value > rules.dcMaxValue.Value)
                             {
                                 Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Setting should be  <= {rules.dcMaxValue.Value}");
                             }
@@ -847,7 +852,7 @@ namespace PPMCheckerTool
                             int distance = rules.dcMinDistanceToSetting.Item2;
 
                             // Calculate the distance to the target setting
-                            int distanceToSetting = CalculateDistanceToSetting(dcEffectiveValue, targetSettingGuid, profileGuid, false);
+                            int distanceToSetting = CalculateDistanceToSetting(dcValue.Value, targetSettingGuid, profileGuid, false);
                             if (distanceToSetting == Int32.MinValue)
                             {
                                 Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to setting {targetSettingName} should be >= {distance}. Setting {targetSettingName} was not set");
@@ -855,7 +860,7 @@ namespace PPMCheckerTool
                             }
                             else if (distanceToSetting < distance)
                             {
-                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to setting {targetSettingName} should be >= {distance}. Actual distance = {distanceToSetting}");
+                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to setting {targetSettingName} should be >= {distance}.");
                             }
                         }
 
@@ -871,7 +876,7 @@ namespace PPMCheckerTool
                             int distance = rules.dcMinDistanceToProfile.Item2;
 
                             // Calculate the distance to reference profile
-                            int distanceToRefProfile = CalculateDistanceToProfile(settingGuid, dcEffectiveValue, refProfileGuid, false);
+                            int distanceToRefProfile = CalculateDistanceToProfile(settingGuid, dcValue.Value, refProfileGuid, false);
 
                             if (distanceToRefProfile == Int32.MinValue)
                             {
@@ -879,7 +884,7 @@ namespace PPMCheckerTool
                             }
                             else if (distanceToRefProfile < distance)
                             {
-                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to profile {refProfileName} should be >= {distance}. Actual distance = {distanceToRefProfile}");
+                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to profile {refProfileName} should be >= {distance}.");
                             }
                         }
 
@@ -892,7 +897,7 @@ namespace PPMCheckerTool
                             int distance = rules.dcMaxDistanceToSetting.Item2;
 
                             // Calculate the distance to the target setting
-                            int distanceToSetting = CalculateDistanceToSetting(dcEffectiveValue, targetSettingGuid, profileGuid, false);
+                            int distanceToSetting = CalculateDistanceToSetting(dcValue.Value, targetSettingGuid, profileGuid, false);
                             if (distanceToSetting == Int32.MinValue)
                             {
                                 Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to setting {targetSettingName} should be <= {distance}. Setting {targetSettingName} was not set");
@@ -900,7 +905,7 @@ namespace PPMCheckerTool
                             }
                             else if (distanceToSetting > distance)
                             {
-                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to setting {targetSettingName} should be <= {distance}. Actual distance = {distanceToSetting}");
+                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to setting {targetSettingName} should be <= {distance}.");
                             }
                         }
 
@@ -916,7 +921,7 @@ namespace PPMCheckerTool
                             int distance = rules.dcMaxDistanceToProfile.Item2;
 
                             // Calculate the distance to reference profile
-                            int distanceToRefProfile = CalculateDistanceToProfile(settingGuid, dcEffectiveValue, refProfileGuid, false);
+                            int distanceToRefProfile = CalculateDistanceToProfile(settingGuid, dcValue.Value, refProfileGuid, false);
 
                             if (distanceToRefProfile == Int32.MinValue)
                             {
@@ -924,7 +929,7 @@ namespace PPMCheckerTool
                             }
                             else if (distanceToRefProfile > distance)
                             {
-                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to profile {refProfileName} should be <= {distance}. Actual distance = {distanceToRefProfile}");
+                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to profile {refProfileName} should be <= {distance}.");
                             }
                         }
                     }
@@ -1160,9 +1165,15 @@ namespace PPMCheckerTool
                 }
             }
 
-            // Check we found a value for the setting that will use to measure the distance
+            // Check if we found a value for the setting that will use to measure the distance
             if (targetSettingValue.HasValue)
             {
+                // Case of Fmax = 0
+                if (IsFrequencyCapSetting(targetSettingGuid) && targetSettingValue.Value == 0)
+                {
+                    targetSettingValue = FMAX;
+                }
+
                 // Calculate the distance between the two settings 
                 int distance = (int)settingValue - (int)targetSettingValue.Value;
                 return distance;
@@ -1224,6 +1235,12 @@ namespace PPMCheckerTool
             if (!refProfileSettingValue.HasValue)
             {
                 return Int32.MinValue;
+            }
+
+            // Case of Fmax = 0
+            if(IsFrequencyCapSetting(settingGuid) && refProfileSettingValue.Value == 0)
+            {
+                refProfileSettingValue = FMAX;
             }
 
             // Calculate the distance to Ref profile 
