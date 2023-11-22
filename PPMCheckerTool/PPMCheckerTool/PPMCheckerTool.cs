@@ -61,6 +61,8 @@ namespace PPMCheckerTool
         public static Guid GuidHeteroDecreaseThreshold1 = new Guid("f8861c27-95e7-475c-865b-13c0cb3f9d6c");
         public static Guid GuidHeteroIncreaseThreshold = new Guid("b000397d-9b0b-483d-98c9-692a6060cfbf");
         public static Guid GuidHeteroIncreaseThreshold1 = new Guid("b000397d-9b0b-483d-98c9-692a6060cfc0");
+        public static Guid GuidClass0Fmax = new Guid("75b0ae3f-bce0-45a7-8c89-c9611c25e100");
+        public static Guid GuidClass1Fmax = new Guid("75b0ae3f-bce0-45a7-8c89-c9611c25e101");
 
         // Current power scheme and power overlay 
         public static Guid RundownPowerScheme = Guid.Empty;
@@ -70,6 +72,9 @@ namespace PPMCheckerTool
 
         // Default Overlay Scheme name
         public const String DefaultOverlayScheme = "OEM Default Overlay Scheme";
+
+        // Fmax
+        public const uint FMAX = 100000;
 
         // Validation rules associated with each PPM setting
         public struct SettingValidationRules
@@ -86,10 +91,20 @@ namespace PPMCheckerTool
             public uint? acMaxValue;
             public uint? dcMaxValue;
 
+            // Min distance to another setting in the same profile
+            // Pair (Setting Guid, MinDistance)
+            public Tuple<Guid, int> acMinDistanceToSetting;
+            public Tuple<Guid, int> dcMinDistanceToSetting;
+
             // Min distance to the setting of another profile
             // Pair (Profile Guid, MinDistance)
             public Tuple<Guid, int> acMinDistanceToProfile;
             public Tuple<Guid, int> dcMinDistanceToProfile;
+
+            // Min distance to another setting in the same profile
+            // Pair (Setting Guid, MinDistance)
+            public Tuple<Guid, int> acMaxDistanceToSetting;
+            public Tuple<Guid, int> dcMaxDistanceToSetting;
 
             // Max distance to the setting of another profile
             // Pair (Profile Guid, MaxDistance)
@@ -657,6 +672,12 @@ namespace PPMCheckerTool
                     {
                         // Validate against the validation rules 
 
+                        // Case of Fmax = 0
+                        if (IsFrequencyCapSetting(settingGuid) && acValue.Value == 0)
+                        {
+                            acValue = FMAX;
+                        }
+
                         // Rule "acValue"
                         if (rules.acValue.HasValue)
                         {
@@ -684,6 +705,29 @@ namespace PPMCheckerTool
                             }
                         }
 
+                        // Rule acMinDistanceToSetting
+                        if (rules.acMinDistanceToSetting != null)
+                        {
+                            Guid targetSettingGuid = rules.acMinDistanceToSetting.Item1;
+                            string targetSettingName;
+                            GuidToFriendlyName.TryGetValue(targetSettingGuid, out targetSettingName);
+
+                            // Get the distance value
+                            int distance = rules.acMinDistanceToSetting.Item2;
+
+                            // Calculate the distance to the target setting
+                            int distanceToSetting = CalculateDistanceToSetting(acValue.Value, targetSettingGuid, profileGuid, true);
+                            if (distanceToSetting == Int32.MinValue)
+                            {
+                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to setting {targetSettingName} should be >= {distance}. Setting {targetSettingName} was not set");
+
+                            }
+                            else if (distanceToSetting < distance)
+                            {
+                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to setting {targetSettingName} should be >= {distance}.");
+                            }
+                        }
+
                         // Rule "acMinDistanceToProfile"
                         if (rules.acMinDistanceToProfile != null)
                         {
@@ -704,7 +748,28 @@ namespace PPMCheckerTool
                             }
                             else if (distanceToRefProfile < distance)
                             {
-                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to profile {refProfileName} should be >= {distance}. Actual distance = {distanceToRefProfile}");
+                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to profile {refProfileName} should be >= {distance}.");
+                            }
+                        }
+
+                        // Rule acMaxDistanceToSetting
+                        if (rules.acMaxDistanceToSetting != null)
+                        {
+                            Guid targetSettingGuid = rules.acMaxDistanceToSetting.Item1;
+                            string targetSettingName;
+                            GuidToFriendlyName.TryGetValue(targetSettingGuid, out targetSettingName);
+                            int distance = rules.acMaxDistanceToSetting.Item2;
+
+                            // Calculate the distance to the target setting
+                            int distanceToSetting = CalculateDistanceToSetting(acValue.Value, targetSettingGuid, profileGuid, true);
+                            if (distanceToSetting == Int32.MinValue)
+                            {
+                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to setting {targetSettingName} should be <= {distance}. Setting {targetSettingName} was not set");
+
+                            }
+                            else if (distanceToSetting > distance)
+                            {
+                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to setting {targetSettingName} should be <= {distance}.");
                             }
                         }
 
@@ -728,7 +793,7 @@ namespace PPMCheckerTool
                             }
                             else if (distanceToRefProfile > distance)
                             {
-                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to profile {refProfileName} should be <= {distance}. Actual distance = {distanceToRefProfile}");
+                                Results.Add($"ERROR , {profileName} , {settingName} , AC , {acValue.Value} , Distance to profile {refProfileName} should be <= {distance}.");
                             }
                         }
                     }
@@ -742,6 +807,12 @@ namespace PPMCheckerTool
                     else
                     {
                         // Validate against the validation rules 
+
+                        // Case of Fmax = 0
+                        if (IsFrequencyCapSetting(settingGuid) && dcValue.Value == 0)
+                        {
+                            dcValue = FMAX;
+                        }
 
                         // Rule "dcValue"
                         if (rules.dcValue.HasValue)
@@ -770,6 +841,29 @@ namespace PPMCheckerTool
                             }
                         }
 
+                        // Rule dcMinDistanceToSetting
+                        if (rules.dcMinDistanceToSetting != null)
+                        {
+                            Guid targetSettingGuid = rules.dcMinDistanceToSetting.Item1;
+                            string targetSettingName;
+                            GuidToFriendlyName.TryGetValue(targetSettingGuid, out targetSettingName);
+
+                            // Get the distance value
+                            int distance = rules.dcMinDistanceToSetting.Item2;
+
+                            // Calculate the distance to the target setting
+                            int distanceToSetting = CalculateDistanceToSetting(dcValue.Value, targetSettingGuid, profileGuid, false);
+                            if (distanceToSetting == Int32.MinValue)
+                            {
+                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to setting {targetSettingName} should be >= {distance}. Setting {targetSettingName} was not set");
+
+                            }
+                            else if (distanceToSetting < distance)
+                            {
+                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to setting {targetSettingName} should be >= {distance}.");
+                            }
+                        }
+
                         // Rule "dcMinDistanceToProfile"
                         if (rules.dcMinDistanceToProfile != null)
                         {
@@ -790,7 +884,28 @@ namespace PPMCheckerTool
                             }
                             else if (distanceToRefProfile < distance)
                             {
-                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to profile {refProfileName} should be >= {distance}. Actual distance = {distanceToRefProfile}");
+                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to profile {refProfileName} should be >= {distance}.");
+                            }
+                        }
+
+                        // Rule dcMaxDistanceToSetting
+                        if (rules.dcMaxDistanceToSetting != null)
+                        {
+                            Guid targetSettingGuid = rules.dcMaxDistanceToSetting.Item1;
+                            string targetSettingName;
+                            GuidToFriendlyName.TryGetValue(targetSettingGuid, out targetSettingName);
+                            int distance = rules.dcMaxDistanceToSetting.Item2;
+
+                            // Calculate the distance to the target setting
+                            int distanceToSetting = CalculateDistanceToSetting(dcValue.Value, targetSettingGuid, profileGuid, false);
+                            if (distanceToSetting == Int32.MinValue)
+                            {
+                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to setting {targetSettingName} should be <= {distance}. Setting {targetSettingName} was not set");
+
+                            }
+                            else if (distanceToSetting > distance)
+                            {
+                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to setting {targetSettingName} should be <= {distance}.");
                             }
                         }
 
@@ -814,7 +929,7 @@ namespace PPMCheckerTool
                             }
                             else if (distanceToRefProfile > distance)
                             {
-                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to profile {refProfileName} should be <= {distance}. Actual distance = {distanceToRefProfile}");
+                                Results.Add($"ERROR , {profileName} , {settingName} , DC , {dcValue.Value} , Distance to profile {refProfileName} should be <= {distance}.");
                             }
                         }
                     }
@@ -1011,6 +1126,64 @@ namespace PPMCheckerTool
         }
 
         /// <summary>
+        /// Calculate the distance between two different settings  
+        /// The two settings should be in the same profile
+        /// E.g. Fmax for P-cores, vs. Fmax for E-cores
+        /// </summary>
+        /// <param name="settingValue"> Value the first setting </param>
+        /// <param name="targetSettingGuid"> The setting's guid that we will use to measure the distance </param>
+        /// <param name="profileGuid"> GUID of the profile of the two settings</param>
+        /// <param name="isAC"> AC/DC mode </param>
+        /// <returns> the distance between the two settings or Int32.MinValue </returns>
+        public static int CalculateDistanceToSetting(uint settingValue, Guid targetSettingGuid, Guid profileGuid, bool isAC)
+        {
+            // Get the value of the setting that we will use to measure the distance
+            var profileId = ProfileNames.FirstOrDefault(x => x.Value.Item3 == profileGuid).Key;
+
+            uint? targetSettingValue = null;
+
+            if (PowSettings.ContainsKey(targetSettingGuid))
+            {
+                if (PowSettings[targetSettingGuid].ContainsKey(profileId))
+                {
+                    if (isAC)
+                    {
+                        targetSettingValue = PowSettings[targetSettingGuid][profileId].Item1;
+                    }
+                    else
+                    {
+                        targetSettingValue = PowSettings[targetSettingGuid][profileId].Item2;
+                    }
+                }
+                else
+                {
+                    // The setting was not set for the profileGuid 
+                    // Check if profileGuid inherits the settings from another profile
+
+                    Guid? refProfileParentGuid = null;
+                    FindSettingInParentProfiles(isAC, profileGuid, targetSettingGuid, ref refProfileParentGuid, ref targetSettingValue);
+                }
+            }
+
+            // Check if we found a value for the setting that will use to measure the distance
+            if (targetSettingValue.HasValue)
+            {
+                // Case of Fmax = 0
+                if (IsFrequencyCapSetting(targetSettingGuid) && targetSettingValue.Value == 0)
+                {
+                    targetSettingValue = FMAX;
+                }
+
+                // Calculate the distance between the two settings 
+                int distance = (int)settingValue - (int)targetSettingValue.Value;
+                return distance;
+            }
+
+            return Int32.MinValue;
+        }
+
+
+        /// <summary>
         /// For a given setting, calculate the distance between two different profiles 
         /// E.g., EPP = 50 for default profile and = 70 for LowQoS profile --> distance between the two profiles = 20 in this case.
         /// </summary>
@@ -1062,6 +1235,12 @@ namespace PPMCheckerTool
             if (!refProfileSettingValue.HasValue)
             {
                 return Int32.MinValue;
+            }
+
+            // Case of Fmax = 0
+            if(IsFrequencyCapSetting(settingGuid) && refProfileSettingValue.Value == 0)
+            {
+                refProfileSettingValue = FMAX;
             }
 
             // Calculate the distance to Ref profile 
@@ -1139,6 +1318,18 @@ namespace PPMCheckerTool
                     settingGuid == GuidHeteroDecreaseThreshold1 ||
                     settingGuid == GuidHeteroIncreaseThreshold ||
                     settingGuid == GuidHeteroIncreaseThreshold1);
+        }
+
+        /// <summary>
+        /// Helper function 
+        /// Verify if a setting is one of the settings to cap the frequency
+        /// </summary>
+        /// <param name="settingGuid"> GUID of the setting</param>
+        /// <returns> True is the setting is a frequency cap setting </returns>
+        static bool IsFrequencyCapSetting(Guid settingGuid)
+        {
+            return (settingGuid == GuidClass0Fmax ||
+                    settingGuid == GuidClass1Fmax);
         }
 
         /// <summary>
@@ -1303,6 +1494,20 @@ namespace PPMCheckerTool
                 }
             }
 
+            // Min Distance to another setting in AC mode
+            if (settingNode["AcMinDistanceToSetting"] != null)
+            {
+                if (settingNode["AcMinDistanceToSetting"]["Setting"] != null && settingNode["AcMinDistanceToSetting"]["Distance"] != null)
+                {
+                    String refSettingeName = settingNode["AcMinDistanceToSetting"]["Setting"].InnerText.Replace(" ", "");
+                    Guid refSettingGuid;
+                    FriendlyNameToGuid.TryGetValue(refSettingeName, out refSettingGuid);
+
+                    int distance = Convert.ToInt32(settingNode["AcMinDistanceToSetting"]["Distance"].InnerText);
+                    settingValidationRules.acMinDistanceToSetting = new Tuple<Guid, int>(refSettingGuid, distance);
+                }
+            }
+
             // Max Distance to profile in AC mode
             if (settingNode["AcMaxDistanceToProfile"] != null)
             {
@@ -1314,6 +1519,20 @@ namespace PPMCheckerTool
 
                     int distance = Convert.ToInt32(settingNode["AcMaxDistanceToProfile"]["Distance"].InnerText);
                     settingValidationRules.acMaxDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
+                }
+            }
+
+            // Max Distance to another setting in AC mode
+            if (settingNode["AcMaxDistanceToSetting"] != null)
+            {
+                if (settingNode["AcMaxDistanceToSetting"]["Setting"] != null && settingNode["AcMaxDistanceToSetting"]["Distance"] != null)
+                {
+                    String refSettingeName = settingNode["AcMaxDistanceToSetting"]["Setting"].InnerText.Replace(" ", "");
+                    Guid refSettingGuid;
+                    FriendlyNameToGuid.TryGetValue(refSettingeName, out refSettingGuid);
+
+                    int distance = Convert.ToInt32(settingNode["AcMaxDistanceToSetting"]["Distance"].InnerText);
+                    settingValidationRules.acMaxDistanceToSetting = new Tuple<Guid, int>(refSettingGuid, distance);
                 }
             }
 
@@ -1349,6 +1568,20 @@ namespace PPMCheckerTool
                 }
             }
 
+            // Min Distance to another setting in DC mode
+            if (settingNode["DcMinDistanceToSetting"] != null)
+            {
+                if (settingNode["DcMinDistanceToSetting"]["Setting"] != null && settingNode["DcMinDistanceToSetting"]["Distance"] != null)
+                {
+                    String refSettingeName = settingNode["DcMinDistanceToSetting"]["Setting"].InnerText.Replace(" ", "");
+                    Guid refSettingGuid;
+                    FriendlyNameToGuid.TryGetValue(refSettingeName, out refSettingGuid);
+
+                    int distance = Convert.ToInt32(settingNode["DcMinDistanceToSetting"]["Distance"].InnerText);
+                    settingValidationRules.dcMinDistanceToSetting = new Tuple<Guid, int>(refSettingGuid, distance);
+                }
+            }
+
             // Max Distance to profile in DC mode
             if (settingNode["DcMaxDistanceToProfile"] != null)
             {
@@ -1360,6 +1593,20 @@ namespace PPMCheckerTool
 
                     int distance = Convert.ToInt32(settingNode["DcMaxDistanceToProfile"]["Distance"].InnerText);
                     settingValidationRules.dcMaxDistanceToProfile = new Tuple<Guid, int>(refProfileGuid, distance);
+                }
+            }
+
+            // Max Distance to another setting in DC mode
+            if (settingNode["DcMaxDistanceToSetting"] != null)
+            {
+                if (settingNode["DcMaxDistanceToSetting"]["Setting"] != null && settingNode["DcMaxDistanceToSetting"]["Distance"] != null)
+                {
+                    String refSettingeName = settingNode["DcMaxDistanceToSetting"]["Setting"].InnerText.Replace(" ", "");
+                    Guid refSettingGuid;
+                    FriendlyNameToGuid.TryGetValue(refSettingeName, out refSettingGuid);
+
+                    int distance = Convert.ToInt32(settingNode["DcMaxDistanceToSetting"]["Distance"].InnerText);
+                    settingValidationRules.dcMaxDistanceToSetting = new Tuple<Guid, int>(refSettingGuid, distance);
                 }
             }
 

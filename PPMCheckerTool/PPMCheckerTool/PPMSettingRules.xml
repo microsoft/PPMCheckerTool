@@ -53,7 +53,27 @@
 					<DcMaxValue> 1500 </DcMaxValue>
 				</Setting>
 
-			
+				<!--Class1 Fmax should be >= Class0 Fmax-->
+				<Setting name="PROCFREQMAX1">
+
+					<DcMinDistanceToSetting>
+						<Setting> PROCFREQMAX </Setting>
+						<Distance> 0 </Distance>
+					</DcMinDistanceToSetting>
+				</Setting>
+			</Profile>
+
+			<!--LowQoS profile-->
+			<Profile name="Profile_LowQos">
+				
+				<!--Class1 Fmax should be >= Class0 Fmax-->
+				<Setting name="PROCFREQMAX1">
+
+					<DcMinDistanceToSetting>
+						<Setting> PROCFREQMAX </Setting>
+						<Distance> 0 </Distance>
+					</DcMinDistanceToSetting>
+				</Setting>
 			</Profile>
 
 		</Overlay>
